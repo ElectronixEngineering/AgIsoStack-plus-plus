@@ -11,6 +11,7 @@
 
 #include <array>
 #include <cstddef>
+#include <vector>
 
 namespace isobus
 {
@@ -57,14 +58,14 @@ namespace isobus
 
 		/// @brief Get the begin iterator.
 		/// @return The begin iterator.
-		T *begin()
+		T *begin() const
 		{
 			return ptr;
 		}
 
 		/// @brief Get the end iterator.
 		/// @return The end iterator.
-		T *end()
+		T *end() const
 		{
 			return ptr + _size * sizeof(T);
 		}
@@ -72,6 +73,7 @@ namespace isobus
 	private:
 		T *ptr;
 		std::size_t _size;
+		bool _isConst;
 	};
 
 	//================================================================================================
@@ -86,7 +88,7 @@ namespace isobus
 		/// @param array The array to create the DataSpan from.
 		/// @return The created DataSpan.
 		template<typename T, std::size_t N>
-		static DataSpan<T> fromArray(std::array<T, N> &array)
+		static DataSpan<T> fromArray(const std::array<T, N> &array)
 		{
 			return DataSpan<T>(array.data(), N);
 		}
@@ -95,9 +97,27 @@ namespace isobus
 		/// @param array The array to create the DataSpan from.
 		/// @return The created DataSpan of const elements.
 		template<typename T, std::size_t N>
-		static DataSpan<std::add_const_t<T>> cfromArray(std::array<T, N> &array)
+		static DataSpan<std::add_const_t<T>> cfromArray(const std::array<T, N> &array)
 		{
 			return DataSpan<std::add_const_t<T>>(array.data(), N);
+		}
+
+		/// @brief Factory method to create a DataSpan from a std::vector.
+		/// @param vector The vector to create the DataSpan from.
+		/// @return The created DataSpan.
+		template<typename T>
+		static DataSpan<T> fromVector(const std::vector<T> &vector)
+		{
+			return DataSpan<T>(vector.data(), vector.size());
+		}
+
+		/// @brief Factory method to create a DataSpan of consts elements from a std::vector of non-const elements.
+		/// @param vector The vector to create the DataSpan from.
+		/// @return The created DataSpan of const elements.
+		template<typename T>
+		static DataSpan<std::add_const_t<T>> cfromVector(const std::vector<T> &vector)
+		{
+			return DataSpan<std::add_const_t<T>>(vector.data(), vector.size());
 		}
 	};
 }

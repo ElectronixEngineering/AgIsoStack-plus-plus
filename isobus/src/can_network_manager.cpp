@@ -172,25 +172,39 @@ namespace isobus
 		}
 		else
 		{
-			CANLibProtocol *currentProtocol;
-
-			// See if any transport layer protocol can handle this message
-			for (std::uint32_t i = 0; i < CANLibProtocol::get_number_protocols(); i++)
+			std::unique_ptr<CANMessageData> data = std::make_unique<CANMessageDataCallback>(dataLength, frameChunkCallback, parentPointer);
+			if (transportProtocol.protocol_transmit_message(parameterGroupNumber,
+			                                                data,
+			                                                sourceControlFunction,
+			                                                destinationControlFunction,
+			                                                txCompleteCallback,
+			                                                parentPointer))
 			{
-				if (CANLibProtocol::get_protocol(i, currentProtocol))
+				// Successfully sent via the transport protocol
+				retVal = true;
+			}
+			else
+			{
+				//! @todo convert the other protocols to stop using the abstract protocollib class
+				CANLibProtocol *currentProtocol;
+				// See if any transport layer protocol can handle this message
+				for (std::uint32_t i = 0; i < CANLibProtocol::get_number_protocols(); i++)
 				{
-					retVal = currentProtocol->protocol_transmit_message(parameterGroupNumber,
-					                                                    nullptr,
-					                                                    dataLength,
-					                                                    sourceControlFunction,
-					                                                    destinationControlFunction,
-					                                                    txCompleteCallback,
-					                                                    parentPointer,
-					                                                    frameChunkCallback);
-
-					if (retVal)
+					if (CANLibProtocol::get_protocol(i, currentProtocol))
 					{
-						break;
+						retVal = currentProtocol->protocol_transmit_message(parameterGroupNumber,
+						                                                    nullptr,
+						                                                    dataLength,
+						                                                    sourceControlFunction,
+						                                                    destinationControlFunction,
+						                                                    txCompleteCallback,
+						                                                    parentPointer,
+						                                                    frameChunkCallback);
+
+						if (retVal)
+						{
+							break;
+						}
 					}
 				}
 			}
@@ -205,7 +219,7 @@ namespace isobus
 				                              sourceControlFunction->get_address(),
 				                              destinationAddress,
 				                              parameterGroupNumber,
-				                              priority,
+				                              static_cast<std::uint8_t>(priority),
 				                              DataSpanFactory::cfromArray(dataBuffer));
 
 				if (retVal && (nullptr != txCompleteCallback))
@@ -259,25 +273,39 @@ namespace isobus
 		}
 		else
 		{
-			CANLibProtocol *currentProtocol;
-
-			// See if any transport layer protocol can handle this message
-			for (std::uint32_t i = 0; i < CANLibProtocol::get_number_protocols(); i++)
+			std::unique_ptr<CANMessageData> messageData = std::make_unique<CANMessageDataView>(data.begin(), data.size());
+			if (transportProtocol.protocol_transmit_message(parameterGroupNumber,
+			                                                messageData,
+			                                                sourceControlFunction,
+			                                                destinationControlFunction,
+			                                                txCompleteCallback,
+			                                                parentPointer))
 			{
-				if (CANLibProtocol::get_protocol(i, currentProtocol))
+				// Successfully sent via the transport protocol
+				retVal = true;
+			}
+			else
+			{
+				//! @todo convert the other protocols to stop using the abstract protocollib class
+				CANLibProtocol *currentProtocol;
+				// See if any transport layer protocol can handle this message
+				for (std::uint32_t i = 0; i < CANLibProtocol::get_number_protocols(); i++)
 				{
-					retVal = currentProtocol->protocol_transmit_message(parameterGroupNumber,
-					                                                    data.begin(),
-					                                                    data.size(),
-					                                                    sourceControlFunction,
-					                                                    destinationControlFunction,
-					                                                    txCompleteCallback,
-					                                                    parentPointer,
-					                                                    nullptr);
-
-					if (retVal)
+					if (CANLibProtocol::get_protocol(i, currentProtocol))
 					{
-						break;
+						retVal = currentProtocol->protocol_transmit_message(parameterGroupNumber,
+						                                                    data.begin(),
+						                                                    data.size(),
+						                                                    sourceControlFunction,
+						                                                    destinationControlFunction,
+						                                                    txCompleteCallback,
+						                                                    parentPointer,
+						                                                    nullptr);
+
+						if (retVal)
+						{
+							break;
+						}
 					}
 				}
 			}
@@ -288,7 +316,7 @@ namespace isobus
 				                              sourceControlFunction->get_address(),
 				                              destinationAddress,
 				                              parameterGroupNumber,
-				                              priority,
+				                              static_cast<std::uint8_t>(priority),
 				                              data);
 
 				if (retVal && (nullptr != txCompleteCallback))
@@ -348,6 +376,9 @@ namespace isobus
 		update_internal_cfs();
 
 		prune_inactive_control_functions();
+
+		// Update transport protocols
+		transportProtocol.update({});
 
 		for (std::size_t i = 0; i < CANLibProtocol::get_number_protocols(); i++)
 		{
@@ -573,7 +604,8 @@ namespace isobus
 		return retVal;
 	}
 
-	CANNetworkManager::CANNetworkManager()
+	CANNetworkManager::CANNetworkManager() :
+	  transportProtocol({})
 	{
 		currentBusloadBitAccumulator.fill(0);
 		lastAddressClaimRequestTimestamp_ms.fill(0);

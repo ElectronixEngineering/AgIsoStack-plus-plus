@@ -276,7 +276,7 @@ namespace isobus
 		                                                      CAN_DATA_LENGTH,
 		                                                      myControlFunction,
 		                                                      partnerControlFunction,
-		                                                      CANIdentifier::PriorityLowest7);
+		                                                      CANIdentifier::CANPriority::PriorityLowest7);
 	}
 
 	bool VirtualTerminalClient::send_enable_disable_object(std::uint16_t objectID, EnableDisableObjectCommand command) const
@@ -294,7 +294,7 @@ namespace isobus
 		                                                      CAN_DATA_LENGTH,
 		                                                      myControlFunction,
 		                                                      partnerControlFunction,
-		                                                      CANIdentifier::PriorityLowest7);
+		                                                      CANIdentifier::CANPriority::PriorityLowest7);
 	}
 
 	bool VirtualTerminalClient::send_select_input_object(std::uint16_t objectID, SelectInputObjectOptions option) const
@@ -312,7 +312,7 @@ namespace isobus
 		                                                      CAN_DATA_LENGTH,
 		                                                      myControlFunction,
 		                                                      partnerControlFunction,
-		                                                      CANIdentifier::PriorityLowest7);
+		                                                      CANIdentifier::CANPriority::PriorityLowest7);
 	}
 
 	bool VirtualTerminalClient::send_ESC() const
@@ -330,7 +330,7 @@ namespace isobus
 		                                                      CAN_DATA_LENGTH,
 		                                                      myControlFunction,
 		                                                      partnerControlFunction,
-		                                                      CANIdentifier::PriorityLowest7);
+		                                                      CANIdentifier::CANPriority::PriorityLowest7);
 	}
 
 	bool VirtualTerminalClient::send_control_audio_signal(std::uint8_t activations, std::uint16_t frequency_hz, std::uint16_t duration_ms, std::uint16_t offTimeDuration_ms) const
@@ -348,7 +348,7 @@ namespace isobus
 		                                                      CAN_DATA_LENGTH,
 		                                                      myControlFunction,
 		                                                      partnerControlFunction,
-		                                                      CANIdentifier::PriorityLowest7);
+		                                                      CANIdentifier::CANPriority::PriorityLowest7);
 	}
 
 	bool VirtualTerminalClient::send_set_audio_volume(std::uint8_t volume_percent) const
@@ -374,7 +374,7 @@ namespace isobus
 		                                                      CAN_DATA_LENGTH,
 		                                                      myControlFunction,
 		                                                      partnerControlFunction,
-		                                                      CANIdentifier::PriorityLowest7);
+		                                                      CANIdentifier::CANPriority::PriorityLowest7);
 	}
 
 	bool VirtualTerminalClient::send_change_child_location(std::uint16_t objectID, std::uint16_t parentObjectID, std::uint8_t relativeXPositionChange, std::uint8_t relativeYPositionChange) const
@@ -392,7 +392,7 @@ namespace isobus
 		                                                      CAN_DATA_LENGTH,
 		                                                      myControlFunction,
 		                                                      partnerControlFunction,
-		                                                      CANIdentifier::PriorityLowest7);
+		                                                      CANIdentifier::CANPriority::PriorityLowest7);
 	}
 
 	bool VirtualTerminalClient::send_change_child_position(std::uint16_t objectID, std::uint16_t parentObjectID, std::uint16_t xPosition, std::uint16_t yPosition) const
@@ -413,7 +413,7 @@ namespace isobus
 		                                                      buffer.size(),
 		                                                      myControlFunction,
 		                                                      partnerControlFunction,
-		                                                      CANIdentifier::PriorityLowest7);
+		                                                      CANIdentifier::CANPriority::PriorityLowest7);
 	}
 
 	bool VirtualTerminalClient::send_change_size_command(std::uint16_t objectID, std::uint16_t newWidth, std::uint16_t newHeight) const
@@ -431,7 +431,7 @@ namespace isobus
 		                                                      CAN_DATA_LENGTH,
 		                                                      myControlFunction,
 		                                                      partnerControlFunction,
-		                                                      CANIdentifier::PriorityLowest7);
+		                                                      CANIdentifier::CANPriority::PriorityLowest7);
 	}
 
 	bool VirtualTerminalClient::send_change_background_colour(std::uint16_t objectID, std::uint8_t colour) const
@@ -449,7 +449,7 @@ namespace isobus
 		                                                      CAN_DATA_LENGTH,
 		                                                      myControlFunction,
 		                                                      partnerControlFunction,
-		                                                      CANIdentifier::PriorityLowest7);
+		                                                      CANIdentifier::CANPriority::PriorityLowest7);
 	}
 
 	bool VirtualTerminalClient::send_change_numeric_value(std::uint16_t objectID, std::uint32_t value) const
@@ -469,7 +469,7 @@ namespace isobus
 		                                                      CAN_DATA_LENGTH,
 		                                                      myControlFunction,
 		                                                      partnerControlFunction,
-		                                                      CANIdentifier::PriorityLowest7);
+		                                                      CANIdentifier::CANPriority::PriorityLowest7);
 	}
 
 	bool VirtualTerminalClient::send_change_string_value(std::uint16_t objectID, uint16_t stringLength, const char *value) const
@@ -499,7 +499,7 @@ namespace isobus
 			                                                        buffer.size(),
 			                                                        myControlFunction,
 			                                                        partnerControlFunction,
-			                                                        CANIdentifier::PriorityLowest7);
+			                                                        CANIdentifier::CANPriority::PriorityLowest7);
 		}
 		return retVal;
 	}
@@ -524,7 +524,7 @@ namespace isobus
 		                                                      CAN_DATA_LENGTH,
 		                                                      myControlFunction,
 		                                                      partnerControlFunction,
-		                                                      CANIdentifier::PriorityLowest7);
+		                                                      CANIdentifier::CANPriority::PriorityLowest7);
 	}
 
 	bool VirtualTerminalClient::send_change_font_attributes(std::uint16_t objectID, std::uint8_t colour, FontSize size, std::uint8_t type, std::uint8_t styleBitfield) const
@@ -542,7 +542,7 @@ namespace isobus
 		                                                      CAN_DATA_LENGTH,
 		                                                      myControlFunction,
 		                                                      partnerControlFunction,
-		                                                      CANIdentifier::PriorityLowest7);
+		                                                      CANIdentifier::CANPriority::PriorityLowest7);
 	}
 
 	bool VirtualTerminalClient::send_change_line_attributes(std::uint16_t objectID, std::uint8_t colour, std::uint8_t width, std::uint16_t lineArtBitmask) const
@@ -560,7 +560,7 @@ namespace isobus
 		                                                      CAN_DATA_LENGTH,
 		                                                      myControlFunction,
 		                                                      partnerControlFunction,
-		                                                      CANIdentifier::PriorityLowest7);
+		                                                      CANIdentifier::CANPriority::PriorityLowest7);
 	}
 
 	bool VirtualTerminalClient::send_change_fill_attributes(std::uint16_t objectID, FillType fillType, std::uint8_t colour, std::uint16_t fillPatternObjectID) const
@@ -578,7 +578,7 @@ namespace isobus
 		                                                      CAN_DATA_LENGTH,
 		                                                      myControlFunction,
 		                                                      partnerControlFunction,
-		                                                      CANIdentifier::PriorityLowest7);
+		                                                      CANIdentifier::CANPriority::PriorityLowest7);
 	}
 
 	bool VirtualTerminalClient::send_change_active_mask(std::uint16_t workingSetObjectID, std::uint16_t newActiveMaskObjectID) const
@@ -596,7 +596,7 @@ namespace isobus
 		                                                      CAN_DATA_LENGTH,
 		                                                      myControlFunction,
 		                                                      partnerControlFunction,
-		                                                      CANIdentifier::PriorityLowest7);
+		                                                      CANIdentifier::CANPriority::PriorityLowest7);
 	}
 
 	bool VirtualTerminalClient::send_change_softkey_mask(MaskType type, std::uint16_t dataOrAlarmMaskObjectID, std::uint16_t newSoftKeyMaskObjectID) const
@@ -614,7 +614,7 @@ namespace isobus
 		                                                      CAN_DATA_LENGTH,
 		                                                      myControlFunction,
 		                                                      partnerControlFunction,
-		                                                      CANIdentifier::PriorityLowest7);
+		                                                      CANIdentifier::CANPriority::PriorityLowest7);
 	}
 
 	bool VirtualTerminalClient::send_change_attribute(std::uint16_t objectID, std::uint8_t attributeID, std::uint32_t value) const
@@ -632,7 +632,7 @@ namespace isobus
 		                                                      CAN_DATA_LENGTH,
 		                                                      myControlFunction,
 		                                                      partnerControlFunction,
-		                                                      CANIdentifier::PriorityLowest7);
+		                                                      CANIdentifier::CANPriority::PriorityLowest7);
 	}
 
 	bool VirtualTerminalClient::send_change_attribute(std::uint16_t objectID, std::uint8_t attributeID, float value) const
@@ -659,7 +659,7 @@ namespace isobus
 		                                                      CAN_DATA_LENGTH,
 		                                                      myControlFunction,
 		                                                      partnerControlFunction,
-		                                                      CANIdentifier::PriorityLowest7);
+		                                                      CANIdentifier::CANPriority::PriorityLowest7);
 	}
 
 	bool VirtualTerminalClient::send_change_priority(std::uint16_t alarmMaskObjectID, AlarmMaskPriority priority) const
@@ -677,7 +677,7 @@ namespace isobus
 		                                                      CAN_DATA_LENGTH,
 		                                                      myControlFunction,
 		                                                      partnerControlFunction,
-		                                                      CANIdentifier::PriorityLowest7);
+		                                                      CANIdentifier::CANPriority::PriorityLowest7);
 	}
 
 	bool VirtualTerminalClient::send_change_list_item(std::uint16_t objectID, std::uint8_t listIndex, std::uint16_t newObjectID) const
@@ -695,7 +695,7 @@ namespace isobus
 		                                                      CAN_DATA_LENGTH,
 		                                                      myControlFunction,
 		                                                      partnerControlFunction,
-		                                                      CANIdentifier::PriorityLowest7);
+		                                                      CANIdentifier::CANPriority::PriorityLowest7);
 	}
 
 	bool VirtualTerminalClient::send_lock_unlock_mask(MaskLockState state, std::uint16_t objectID, std::uint16_t timeout_ms) const
@@ -713,7 +713,7 @@ namespace isobus
 		                                                      CAN_DATA_LENGTH,
 		                                                      myControlFunction,
 		                                                      partnerControlFunction,
-		                                                      CANIdentifier::PriorityLowest7);
+		                                                      CANIdentifier::CANPriority::PriorityLowest7);
 	}
 
 	bool VirtualTerminalClient::send_execute_macro(std::uint16_t objectID) const
@@ -731,7 +731,7 @@ namespace isobus
 		                                                      CAN_DATA_LENGTH,
 		                                                      myControlFunction,
 		                                                      partnerControlFunction,
-		                                                      CANIdentifier::PriorityLowest7);
+		                                                      CANIdentifier::CANPriority::PriorityLowest7);
 	}
 
 	bool VirtualTerminalClient::send_change_object_label(std::uint16_t objectID, std::uint16_t labelStringObjectID, std::uint8_t fontType, std::uint16_t graphicalDesignatorObjectID) const
@@ -749,7 +749,7 @@ namespace isobus
 		                                                      CAN_DATA_LENGTH,
 		                                                      myControlFunction,
 		                                                      partnerControlFunction,
-		                                                      CANIdentifier::PriorityLowest7);
+		                                                      CANIdentifier::CANPriority::PriorityLowest7);
 	}
 
 	bool VirtualTerminalClient::send_change_polygon_point(std::uint16_t objectID, std::uint8_t pointIndex, std::uint16_t newXValue, std::uint16_t newYValue) const
@@ -767,7 +767,7 @@ namespace isobus
 		                                                      CAN_DATA_LENGTH,
 		                                                      myControlFunction,
 		                                                      partnerControlFunction,
-		                                                      CANIdentifier::PriorityLowest7);
+		                                                      CANIdentifier::CANPriority::PriorityLowest7);
 	}
 
 	bool VirtualTerminalClient::send_change_polygon_scale(std::uint16_t objectID, std::uint16_t widthAttribute, std::uint16_t heightAttribute) const
@@ -785,7 +785,7 @@ namespace isobus
 		                                                      CAN_DATA_LENGTH,
 		                                                      myControlFunction,
 		                                                      partnerControlFunction,
-		                                                      CANIdentifier::PriorityLowest7);
+		                                                      CANIdentifier::CANPriority::PriorityLowest7);
 	}
 
 	bool VirtualTerminalClient::send_select_colour_map_or_palette(std::uint16_t objectID) const
@@ -803,7 +803,7 @@ namespace isobus
 		                                                      CAN_DATA_LENGTH,
 		                                                      myControlFunction,
 		                                                      partnerControlFunction,
-		                                                      CANIdentifier::PriorityLowest7);
+		                                                      CANIdentifier::CANPriority::PriorityLowest7);
 	}
 
 	bool VirtualTerminalClient::send_execute_extended_macro(std::uint16_t objectID) const
@@ -821,7 +821,7 @@ namespace isobus
 		                                                      CAN_DATA_LENGTH,
 		                                                      myControlFunction,
 		                                                      partnerControlFunction,
-		                                                      CANIdentifier::PriorityLowest7);
+		                                                      CANIdentifier::CANPriority::PriorityLowest7);
 	}
 
 	bool VirtualTerminalClient::send_select_active_working_set(std::uint64_t NAMEofWorkingSetMasterForDesiredWorkingSet) const
@@ -840,7 +840,7 @@ namespace isobus
 		                                                      buffer.size(),
 		                                                      myControlFunction,
 		                                                      partnerControlFunction,
-		                                                      CANIdentifier::PriorityLowest7);
+		                                                      CANIdentifier::CANPriority::PriorityLowest7);
 	}
 
 	bool VirtualTerminalClient::send_set_graphics_cursor(std::uint16_t objectID, std::int16_t xPosition, std::int16_t yPosition) const
@@ -858,7 +858,7 @@ namespace isobus
 		                                                      CAN_DATA_LENGTH,
 		                                                      myControlFunction,
 		                                                      partnerControlFunction,
-		                                                      CANIdentifier::PriorityLowest7);
+		                                                      CANIdentifier::CANPriority::PriorityLowest7);
 	}
 
 	bool VirtualTerminalClient::send_move_graphics_cursor(std::uint16_t objectID, std::int16_t xOffset, std::int16_t yOffset) const
@@ -876,7 +876,7 @@ namespace isobus
 		                                                      CAN_DATA_LENGTH,
 		                                                      myControlFunction,
 		                                                      partnerControlFunction,
-		                                                      CANIdentifier::PriorityLowest7);
+		                                                      CANIdentifier::CANPriority::PriorityLowest7);
 	}
 
 	bool VirtualTerminalClient::send_set_foreground_colour(std::uint16_t objectID, std::uint8_t colour) const
@@ -894,7 +894,7 @@ namespace isobus
 		                                                      CAN_DATA_LENGTH,
 		                                                      myControlFunction,
 		                                                      partnerControlFunction,
-		                                                      CANIdentifier::PriorityLowest7);
+		                                                      CANIdentifier::CANPriority::PriorityLowest7);
 	}
 
 	bool VirtualTerminalClient::send_set_background_colour(std::uint16_t objectID, std::uint8_t colour) const
@@ -912,7 +912,7 @@ namespace isobus
 		                                                      CAN_DATA_LENGTH,
 		                                                      myControlFunction,
 		                                                      partnerControlFunction,
-		                                                      CANIdentifier::PriorityLowest7);
+		                                                      CANIdentifier::CANPriority::PriorityLowest7);
 	}
 
 	bool VirtualTerminalClient::send_set_line_attributes_object_id(std::uint16_t objectID, std::uint16_t lineAttributesObjectID) const
@@ -930,7 +930,7 @@ namespace isobus
 		                                                      CAN_DATA_LENGTH,
 		                                                      myControlFunction,
 		                                                      partnerControlFunction,
-		                                                      CANIdentifier::PriorityLowest7);
+		                                                      CANIdentifier::CANPriority::PriorityLowest7);
 	}
 
 	bool VirtualTerminalClient::send_set_fill_attributes_object_id(std::uint16_t objectID, std::uint16_t fillAttributesObjectID) const
@@ -948,7 +948,7 @@ namespace isobus
 		                                                      CAN_DATA_LENGTH,
 		                                                      myControlFunction,
 		                                                      partnerControlFunction,
-		                                                      CANIdentifier::PriorityLowest7);
+		                                                      CANIdentifier::CANPriority::PriorityLowest7);
 	}
 
 	bool VirtualTerminalClient::send_set_font_attributes_object_id(std::uint16_t objectID, std::uint16_t fontAttributesObjectID) const
@@ -966,7 +966,7 @@ namespace isobus
 		                                                      CAN_DATA_LENGTH,
 		                                                      myControlFunction,
 		                                                      partnerControlFunction,
-		                                                      CANIdentifier::PriorityLowest7);
+		                                                      CANIdentifier::CANPriority::PriorityLowest7);
 	}
 
 	bool VirtualTerminalClient::send_erase_rectangle(std::uint16_t objectID, std::uint16_t width, std::uint16_t height) const
@@ -984,7 +984,7 @@ namespace isobus
 		                                                      CAN_DATA_LENGTH,
 		                                                      myControlFunction,
 		                                                      partnerControlFunction,
-		                                                      CANIdentifier::PriorityLowest7);
+		                                                      CANIdentifier::CANPriority::PriorityLowest7);
 	}
 
 	bool VirtualTerminalClient::send_draw_point(std::uint16_t objectID, std::int16_t xOffset, std::int16_t yOffset) const
@@ -1002,7 +1002,7 @@ namespace isobus
 		                                                      CAN_DATA_LENGTH,
 		                                                      myControlFunction,
 		                                                      partnerControlFunction,
-		                                                      CANIdentifier::PriorityLowest7);
+		                                                      CANIdentifier::CANPriority::PriorityLowest7);
 	}
 
 	bool VirtualTerminalClient::send_draw_line(std::uint16_t objectID, std::int16_t xOffset, std::int16_t yOffset) const
@@ -1020,7 +1020,7 @@ namespace isobus
 		                                                      CAN_DATA_LENGTH,
 		                                                      myControlFunction,
 		                                                      partnerControlFunction,
-		                                                      CANIdentifier::PriorityLowest7);
+		                                                      CANIdentifier::CANPriority::PriorityLowest7);
 	}
 
 	bool VirtualTerminalClient::send_draw_rectangle(std::uint16_t objectID, std::uint16_t width, std::uint16_t height) const
@@ -1038,7 +1038,7 @@ namespace isobus
 		                                                      CAN_DATA_LENGTH,
 		                                                      myControlFunction,
 		                                                      partnerControlFunction,
-		                                                      CANIdentifier::PriorityLowest7);
+		                                                      CANIdentifier::CANPriority::PriorityLowest7);
 	}
 
 	bool VirtualTerminalClient::send_draw_closed_ellipse(std::uint16_t objectID, std::uint16_t width, std::uint16_t height) const
@@ -1056,7 +1056,7 @@ namespace isobus
 		                                                      CAN_DATA_LENGTH,
 		                                                      myControlFunction,
 		                                                      partnerControlFunction,
-		                                                      CANIdentifier::PriorityLowest7);
+		                                                      CANIdentifier::CANPriority::PriorityLowest7);
 	}
 
 	bool VirtualTerminalClient::send_draw_polygon(std::uint16_t objectID, std::uint8_t numberOfPoints, std::int16_t *listOfXOffsetsRelativeToCursor, std::int16_t *listOfYOffsetsRelativeToCursor) const
@@ -1088,7 +1088,7 @@ namespace isobus
 			                                                        buffer.size(),
 			                                                        myControlFunction,
 			                                                        partnerControlFunction,
-			                                                        CANIdentifier::PriorityLowest7);
+			                                                        CANIdentifier::CANPriority::PriorityLowest7);
 		}
 		return retVal;
 	}
@@ -1120,7 +1120,7 @@ namespace isobus
 			                                                        buffer.size(),
 			                                                        myControlFunction,
 			                                                        partnerControlFunction,
-			                                                        CANIdentifier::PriorityLowest7);
+			                                                        CANIdentifier::CANPriority::PriorityLowest7);
 		}
 		return retVal;
 	}
@@ -1140,7 +1140,7 @@ namespace isobus
 		                                                      CAN_DATA_LENGTH,
 		                                                      myControlFunction,
 		                                                      partnerControlFunction,
-		                                                      CANIdentifier::PriorityLowest7);
+		                                                      CANIdentifier::CANPriority::PriorityLowest7);
 	}
 
 	bool VirtualTerminalClient::send_zoom_viewport(std::uint16_t objectID, float zoom) const
@@ -1167,7 +1167,7 @@ namespace isobus
 		                                                      CAN_DATA_LENGTH,
 		                                                      myControlFunction,
 		                                                      partnerControlFunction,
-		                                                      CANIdentifier::PriorityLowest7);
+		                                                      CANIdentifier::CANPriority::PriorityLowest7);
 	}
 
 	bool VirtualTerminalClient::send_pan_and_zoom_viewport(std::uint16_t objectID, std::int16_t xAttribute, std::int16_t yAttribute, float zoom) const
@@ -1198,7 +1198,7 @@ namespace isobus
 		                                                      buffer.size(),
 		                                                      myControlFunction,
 		                                                      partnerControlFunction,
-		                                                      CANIdentifier::PriorityLowest7);
+		                                                      CANIdentifier::CANPriority::PriorityLowest7);
 	}
 
 	bool VirtualTerminalClient::send_change_viewport_size(std::uint16_t objectID, std::uint16_t width, std::uint16_t height) const
@@ -1222,7 +1222,7 @@ namespace isobus
 			                                                        CAN_DATA_LENGTH,
 			                                                        myControlFunction,
 			                                                        partnerControlFunction,
-			                                                        CANIdentifier::PriorityLowest7);
+			                                                        CANIdentifier::CANPriority::PriorityLowest7);
 		}
 		return retVal;
 	}
@@ -1242,7 +1242,7 @@ namespace isobus
 		                                                      CAN_DATA_LENGTH,
 		                                                      myControlFunction,
 		                                                      partnerControlFunction,
-		                                                      CANIdentifier::PriorityLowest7);
+		                                                      CANIdentifier::CANPriority::PriorityLowest7);
 	}
 
 	bool VirtualTerminalClient::send_copy_canvas_to_picture_graphic(std::uint16_t graphicsContextObjectID, std::uint16_t objectID) const
@@ -1260,7 +1260,7 @@ namespace isobus
 		                                                      CAN_DATA_LENGTH,
 		                                                      myControlFunction,
 		                                                      partnerControlFunction,
-		                                                      CANIdentifier::PriorityLowest7);
+		                                                      CANIdentifier::CANPriority::PriorityLowest7);
 	}
 
 	bool VirtualTerminalClient::send_copy_viewport_to_picture_graphic(std::uint16_t graphicsContextObjectID, std::uint16_t objectID) const
@@ -1278,7 +1278,7 @@ namespace isobus
 		                                                      CAN_DATA_LENGTH,
 		                                                      myControlFunction,
 		                                                      partnerControlFunction,
-		                                                      CANIdentifier::PriorityLowest7);
+		                                                      CANIdentifier::CANPriority::PriorityLowest7);
 	}
 
 	bool VirtualTerminalClient::send_get_attribute_value(std::uint16_t objectID, std::uint8_t attributeID) const
@@ -1296,7 +1296,7 @@ namespace isobus
 		                                                      CAN_DATA_LENGTH,
 		                                                      myControlFunction,
 		                                                      partnerControlFunction,
-		                                                      CANIdentifier::PriorityLowest7);
+		                                                      CANIdentifier::CANPriority::PriorityLowest7);
 	}
 
 	std::uint8_t VirtualTerminalClient::get_softkey_x_axis_pixels() const
@@ -2015,7 +2015,7 @@ namespace isobus
 		                                                      CAN_DATA_LENGTH,
 		                                                      myControlFunction,
 		                                                      partnerControlFunction,
-		                                                      CANIdentifier::PriorityLowest7);
+		                                                      CANIdentifier::CANPriority::PriorityLowest7);
 	}
 
 	bool VirtualTerminalClient::send_working_set_maintenance(bool initializing, VTVersion workingSetVersion) const
@@ -2069,7 +2069,7 @@ namespace isobus
 		                                                      CAN_DATA_LENGTH,
 		                                                      myControlFunction,
 		                                                      partnerControlFunction,
-		                                                      CANIdentifier::PriorityLowest7);
+		                                                      CANIdentifier::CANPriority::PriorityLowest7);
 	}
 
 	bool VirtualTerminalClient::send_get_memory(std::uint32_t requiredMemory) const
@@ -2087,7 +2087,7 @@ namespace isobus
 		                                                      CAN_DATA_LENGTH,
 		                                                      myControlFunction,
 		                                                      partnerControlFunction,
-		                                                      CANIdentifier::PriorityLowest7);
+		                                                      CANIdentifier::CANPriority::PriorityLowest7);
 	}
 
 	bool VirtualTerminalClient::send_get_number_of_softkeys() const
@@ -2105,7 +2105,7 @@ namespace isobus
 		                                                      CAN_DATA_LENGTH,
 		                                                      myControlFunction,
 		                                                      partnerControlFunction,
-		                                                      CANIdentifier::PriorityLowest7);
+		                                                      CANIdentifier::CANPriority::PriorityLowest7);
 	}
 
 	bool VirtualTerminalClient::send_get_text_font_data() const
@@ -2123,7 +2123,7 @@ namespace isobus
 		                                                      CAN_DATA_LENGTH,
 		                                                      myControlFunction,
 		                                                      partnerControlFunction,
-		                                                      CANIdentifier::PriorityLowest7);
+		                                                      CANIdentifier::CANPriority::PriorityLowest7);
 	}
 
 	bool VirtualTerminalClient::send_get_hardware() const
@@ -2141,7 +2141,7 @@ namespace isobus
 		                                                      CAN_DATA_LENGTH,
 		                                                      myControlFunction,
 		                                                      partnerControlFunction,
-		                                                      CANIdentifier::PriorityLowest7);
+		                                                      CANIdentifier::CANPriority::PriorityLowest7);
 	}
 
 	bool VirtualTerminalClient::send_get_supported_widechars() const
@@ -2159,7 +2159,7 @@ namespace isobus
 		                                                      CAN_DATA_LENGTH,
 		                                                      myControlFunction,
 		                                                      partnerControlFunction,
-		                                                      CANIdentifier::PriorityLowest7);
+		                                                      CANIdentifier::CANPriority::PriorityLowest7);
 	}
 
 	bool VirtualTerminalClient::send_get_window_mask_data() const
@@ -2177,7 +2177,7 @@ namespace isobus
 		                                                      CAN_DATA_LENGTH,
 		                                                      myControlFunction,
 		                                                      partnerControlFunction,
-		                                                      CANIdentifier::PriorityLowest7);
+		                                                      CANIdentifier::CANPriority::PriorityLowest7);
 	}
 
 	bool VirtualTerminalClient::send_get_supported_objects() const
@@ -2195,7 +2195,7 @@ namespace isobus
 		                                                      CAN_DATA_LENGTH,
 		                                                      myControlFunction,
 		                                                      partnerControlFunction,
-		                                                      CANIdentifier::PriorityLowest7);
+		                                                      CANIdentifier::CANPriority::PriorityLowest7);
 	}
 
 	bool VirtualTerminalClient::send_get_versions() const
@@ -2213,7 +2213,7 @@ namespace isobus
 		                                                      CAN_DATA_LENGTH,
 		                                                      myControlFunction,
 		                                                      partnerControlFunction,
-		                                                      CANIdentifier::PriorityLowest7);
+		                                                      CANIdentifier::CANPriority::PriorityLowest7);
 	}
 
 	bool VirtualTerminalClient::send_store_version(std::array<std::uint8_t, 7> versionLabel) const
@@ -2231,7 +2231,7 @@ namespace isobus
 		                                                      CAN_DATA_LENGTH,
 		                                                      myControlFunction,
 		                                                      partnerControlFunction,
-		                                                      CANIdentifier::PriorityLowest7);
+		                                                      CANIdentifier::CANPriority::PriorityLowest7);
 	}
 
 	bool VirtualTerminalClient::send_load_version(std::array<std::uint8_t, 7> versionLabel) const
@@ -2249,7 +2249,7 @@ namespace isobus
 		                                                      CAN_DATA_LENGTH,
 		                                                      myControlFunction,
 		                                                      partnerControlFunction,
-		                                                      CANIdentifier::PriorityLowest7);
+		                                                      CANIdentifier::CANPriority::PriorityLowest7);
 	}
 
 	bool VirtualTerminalClient::send_delete_version(std::array<std::uint8_t, 7> versionLabel) const
@@ -2267,7 +2267,7 @@ namespace isobus
 		                                                      CAN_DATA_LENGTH,
 		                                                      myControlFunction,
 		                                                      partnerControlFunction,
-		                                                      CANIdentifier::PriorityLowest7);
+		                                                      CANIdentifier::CANPriority::PriorityLowest7);
 	}
 
 	bool VirtualTerminalClient::send_extended_get_versions() const
@@ -2285,7 +2285,7 @@ namespace isobus
 		                                                      CAN_DATA_LENGTH,
 		                                                      myControlFunction,
 		                                                      partnerControlFunction,
-		                                                      CANIdentifier::PriorityLowest7);
+		                                                      CANIdentifier::CANPriority::PriorityLowest7);
 	}
 
 	bool VirtualTerminalClient::send_extended_store_version(std::array<std::uint8_t, 32> versionLabel) const
@@ -2298,7 +2298,7 @@ namespace isobus
 		                                                      buffer.size(),
 		                                                      myControlFunction,
 		                                                      partnerControlFunction,
-		                                                      CANIdentifier::PriorityLowest7);
+		                                                      CANIdentifier::CANPriority::PriorityLowest7);
 	}
 
 	bool VirtualTerminalClient::send_extended_load_version(std::array<std::uint8_t, 32> versionLabel) const
@@ -2311,7 +2311,7 @@ namespace isobus
 		                                                      buffer.size(),
 		                                                      myControlFunction,
 		                                                      partnerControlFunction,
-		                                                      CANIdentifier::PriorityLowest7);
+		                                                      CANIdentifier::CANPriority::PriorityLowest7);
 	}
 
 	bool VirtualTerminalClient::send_extended_delete_version(std::array<std::uint8_t, 32> versionLabel) const
@@ -2324,7 +2324,7 @@ namespace isobus
 		                                                      buffer.size(),
 		                                                      myControlFunction,
 		                                                      partnerControlFunction,
-		                                                      CANIdentifier::PriorityLowest7);
+		                                                      CANIdentifier::CANPriority::PriorityLowest7);
 	}
 
 	bool VirtualTerminalClient::send_end_of_object_pool() const
@@ -2342,7 +2342,7 @@ namespace isobus
 		                                                      CAN_DATA_LENGTH,
 		                                                      myControlFunction,
 		                                                      partnerControlFunction,
-		                                                      CANIdentifier::PriorityLowest7);
+		                                                      CANIdentifier::CANPriority::PriorityLowest7);
 	}
 
 	bool VirtualTerminalClient::send_working_set_master() const
@@ -2360,7 +2360,7 @@ namespace isobus
 		                                                      CAN_DATA_LENGTH,
 		                                                      myControlFunction,
 		                                                      nullptr,
-		                                                      CANIdentifier::PriorityLowest7);
+		                                                      CANIdentifier::CANPriority::PriorityLowest7);
 	}
 
 	bool VirtualTerminalClient::send_auxiliary_functions_preferred_assignment() const
@@ -2376,7 +2376,7 @@ namespace isobus
 		                                                      buffer.size(),
 		                                                      myControlFunction,
 		                                                      partnerControlFunction,
-		                                                      CANIdentifier::PriorityLowest7);
+		                                                      CANIdentifier::CANPriority::PriorityLowest7);
 	}
 
 	bool VirtualTerminalClient::send_auxiliary_function_assignment_response(std::uint16_t functionObjectID, bool hasError, bool isAlreadyAssigned) const
@@ -2403,7 +2403,7 @@ namespace isobus
 		                                                      CAN_DATA_LENGTH,
 		                                                      myControlFunction,
 		                                                      partnerControlFunction,
-		                                                      CANIdentifier::PriorityLowest7);
+		                                                      CANIdentifier::CANPriority::PriorityLowest7);
 	}
 
 	bool VirtualTerminalClient::send_auxiliary_input_maintenance() const
@@ -2421,7 +2421,7 @@ namespace isobus
 		                                                      CAN_DATA_LENGTH,
 		                                                      myControlFunction,
 		                                                      nullptr,
-		                                                      CANIdentifier::Priority3);
+		                                                      CANIdentifier::CANPriority::Priority3);
 	}
 
 	bool VirtualTerminalClient::send_auxiliary_input_status_enable_response(std::uint16_t objectID, bool isEnabled, bool invalidObjectID) const
@@ -2439,7 +2439,7 @@ namespace isobus
 		                                                      CAN_DATA_LENGTH,
 		                                                      myControlFunction,
 		                                                      partnerControlFunction,
-		                                                      CANIdentifier::PriorityLowest7);
+		                                                      CANIdentifier::CANPriority::PriorityLowest7);
 	}
 
 	void VirtualTerminalClient::update_auxiliary_input_status()
@@ -2497,7 +2497,7 @@ namespace isobus
 				                                                        CAN_DATA_LENGTH,
 				                                                        myControlFunction,
 				                                                        partnerControlFunction,
-				                                                        CANIdentifier::Priority3);
+				                                                        CANIdentifier::CANPriority::Priority3);
 			}
 			else
 			{
@@ -2506,7 +2506,7 @@ namespace isobus
 				                                                        CAN_DATA_LENGTH,
 				                                                        myControlFunction,
 				                                                        nullptr,
-				                                                        CANIdentifier::Priority3);
+				                                                        CANIdentifier::CANPriority::Priority3);
 			}
 		}
 		return retVal;
