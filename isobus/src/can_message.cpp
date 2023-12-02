@@ -41,7 +41,7 @@ namespace isobus
 
 	bool CANMessage::has_valid_source_control_function() const
 	{
-		return nullptr != source;
+		return (nullptr != source) && source->get_address_valid();
 	}
 
 	std::shared_ptr<ControlFunction> CANMessage::get_destination_control_function() const
@@ -51,10 +51,10 @@ namespace isobus
 
 	bool CANMessage::has_valid_destination_control_function() const
 	{
-		return nullptr != destination;
+		return (nullptr != destination) && destination->get_address_valid();
 	}
 
-	bool CANMessage::is_destination_global() const
+	bool CANMessage::is_broadcast() const
 	{
 		return identifier.get_destination_address() == CANIdentifier::GLOBAL_ADDRESS;
 	}

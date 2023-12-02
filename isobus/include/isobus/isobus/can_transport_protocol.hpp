@@ -110,14 +110,14 @@ namespace isobus
 			friend class TransportProtocolManager; ///< Allows the TP manager full access
 
 			/// @brief Factory method to create a new receive session
-			/// @param[in] pgn The PGN of the message
+			/// @param[in] parameterGroupNumber The PGN of the message
 			/// @param[in] totalMessageSize The total size of the message in bytes
 			/// @param[in] totalNumberOfPackets The total number of packets that will be sent or received in this session
 			/// @param[in] clearToSendPacketMax The maximum number of packets that can be sent per CTS as indicated by the RTS message
 			/// @param[in] source The source control function
 			/// @param[in] destination The destination control function
 			/// @returns A new receive session
-			static TransportProtocolSession create_receive_session(std::uint32_t pgn,
+			static TransportProtocolSession create_receive_session(std::uint32_t parameterGroupNumber,
 			                                                       std::uint16_t totalMessageSize,
 			                                                       std::uint8_t totalNumberOfPackets,
 			                                                       std::uint8_t clearToSendPacketMax,
@@ -125,14 +125,14 @@ namespace isobus
 			                                                       std::shared_ptr<ControlFunction> destination);
 
 			/// @brief Factory method to create a new transmit session
-			/// @param[in] pgn The PGN of the message
+			/// @param[in] parameterGroupNumber The PGN of the message
 			/// @param[in] data Data buffer (will be moved into the session)
 			/// @param[in] source The source control function
 			/// @param[in] destination The destination control function
 			/// @param[in] sessionCompleteCallback A callback for when the session completes
 			/// @param[in] parentPointer A generic context object for the tx complete and chunk callbacks
 			/// @returns A new transmit session
-			static TransportProtocolSession create_transmit_session(std::uint32_t pgn,
+			static TransportProtocolSession create_transmit_session(std::uint32_t parameterGroupNumber,
 			                                                        std::unique_ptr<CANMessageData> data,
 			                                                        std::shared_ptr<ControlFunction> source,
 			                                                        std::shared_ptr<ControlFunction> destination,
@@ -175,7 +175,7 @@ namespace isobus
 			/// @brief The constructor for a session
 			/// @param[in] direction The direction of the session
 			/// @param[in] data Data buffer (will be moved into the session)
-			/// @param[in] pgn The PGN of the message
+			/// @param[in] parameterGroupNumber The PGN of the message
 			/// @param[in] totalMessageSize The total size of the message in bytes
 			/// @param[in] totalNumberOfPackets The total number of packets that will be sent or received in this session
 			/// @param[in] clearToSendPacketMax The maximum number of packets that can be sent per CTS as indicated by the RTS message
@@ -185,7 +185,7 @@ namespace isobus
 			/// @param[in] parentPointer A generic context object for the tx complete and chunk callbacks
 			TransportProtocolSession(Direction direction,
 			                         std::unique_ptr<CANMessageData> data,
-			                         std::uint32_t pgn,
+			                         std::uint32_t parameterGroupNumber,
 			                         std::uint16_t totalMessageSize,
 			                         std::uint8_t totalNumberOfPackets,
 			                         std::uint8_t clearToSendPacketMax,
@@ -261,7 +261,7 @@ namespace isobus
 		/// @brief The protocol's terminate function
 		void terminate(CANLibBadge<CANNetworkManager>);
 
-		/// @brief Updates the diagnostic protocol
+		/// @brief Updates the transport protocol
 		void update(CANLibBadge<CANNetworkManager>);
 
 		///@brief Sends data transfer packets for the specified TransportProtocolSession.
@@ -270,40 +270,40 @@ namespace isobus
 
 		/// @brief Processes a broadcast announce message.
 		/// @param[in] source The source control function that sent the broadcast announce message.
-		/// @param[in] pgn The Parameter Group Number of the broadcast announce message.
+		/// @param[in] parameterGroupNumber The Parameter Group Number of the broadcast announce message.
 		/// @param[in] totalMessageSize The total size of the broadcast announce message.
 		/// @param[in] totalNumberOfPackets The total number of packets in the broadcast announce message.
-		void process_broadcast_announce_message(const std::shared_ptr<ControlFunction> source, std::uint32_t pgn, std::uint16_t totalMessageSize, std::uint8_t totalNumberOfPackets);
+		void process_broadcast_announce_message(const std::shared_ptr<ControlFunction> source, std::uint32_t parameterGroupNumber, std::uint16_t totalMessageSize, std::uint8_t totalNumberOfPackets);
 
 		/// @brief Processes a request to send a message over the CAN transport protocol.
 		/// @param[in] source The shared pointer to the source control function.
 		/// @param[in] destination The shared pointer to the destination control function.
-		/// @param[in] pgn The Parameter Group Number of the message.
+		/// @param[in] parameterGroupNumber The Parameter Group Number of the message.
 		/// @param[in] totalMessageSize The total size of the message in bytes.
 		/// @param[in] totalNumberOfPackets The total number of packets to be sent.
 		/// @param[in] clearToSendPacketMax The maximum number of clear to send packets that can be sent.
-		void process_request_to_send(const std::shared_ptr<ControlFunction> source, const std::shared_ptr<ControlFunction> destination, std::uint32_t pgn, std::uint16_t totalMessageSize, std::uint8_t totalNumberOfPackets, std::uint8_t clearToSendPacketMax);
+		void process_request_to_send(const std::shared_ptr<ControlFunction> source, const std::shared_ptr<ControlFunction> destination, std::uint32_t parameterGroupNumber, std::uint16_t totalMessageSize, std::uint8_t totalNumberOfPackets, std::uint8_t clearToSendPacketMax);
 
 		/// @brief Processes the Clear To Send (CTS) message.
 		/// @param[in] source The shared pointer to the source control function.
 		/// @param[in] destination The shared pointer to the destination control function.
-		/// @param[in] pgn The Parameter Group Number (PGN) of the message.
+		/// @param[in] parameterGroupNumber The Parameter Group Number (PGN) of the message.
 		/// @param[in] packetsToBeSent The number of packets to be sent.
 		/// @param[in] nextPacketNumber The next packet number.
-		void process_clear_to_send(const std::shared_ptr<ControlFunction> source, const std::shared_ptr<ControlFunction> destination, std::uint32_t pgn, std::uint8_t packetsToBeSent, std::uint8_t nextPacketNumber);
+		void process_clear_to_send(const std::shared_ptr<ControlFunction> source, const std::shared_ptr<ControlFunction> destination, std::uint32_t parameterGroupNumber, std::uint8_t packetsToBeSent, std::uint8_t nextPacketNumber);
 
 		/// @brief Processes the end of session acknowledgement.
 		/// @param[in] source The source control function.
 		/// @param[in] destination The destination control function.
-		/// @param[in] pgn The parameter group number.
-		void process_end_of_session_acknowledgement(const std::shared_ptr<ControlFunction> source, const std::shared_ptr<ControlFunction> destination, std::uint32_t pgn);
+		/// @param[in] parameterGroupNumber The parameter group number.
+		void process_end_of_session_acknowledgement(const std::shared_ptr<ControlFunction> source, const std::shared_ptr<ControlFunction> destination, std::uint32_t parameterGroupNumber);
 
 		/// @brief Processes an abort message in the CAN transport protocol.
 		/// @param[in] source The shared pointer to the source control function.
 		/// @param[in] destination The shared pointer to the destination control function.
-		/// @param[in] pgn The PGN (Parameter Group Number) of the message.
+		/// @param[in] parameterGroupNumber The PGN (Parameter Group Number) of the message.
 		/// @param[in] reason The reason for the connection abort.
-		void process_abort(const std::shared_ptr<ControlFunction> source, const std::shared_ptr<ControlFunction> destination, std::uint32_t pgn, TransportProtocolManager::ConnectionAbortReason reason);
+		void process_abort(const std::shared_ptr<ControlFunction> source, const std::shared_ptr<ControlFunction> destination, std::uint32_t parameterGroupNumber, TransportProtocolManager::ConnectionAbortReason reason);
 
 		/// @brief Processes a connection management message.
 		/// @param[in] message The CAN message to be processed.

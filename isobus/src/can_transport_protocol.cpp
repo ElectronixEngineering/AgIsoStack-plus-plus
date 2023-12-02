@@ -25,7 +25,7 @@ namespace isobus
 {
 	TransportProtocolManager::TransportProtocolSession::TransportProtocolSession(Direction direction,
 	                                                                             std::unique_ptr<CANMessageData> data,
-	                                                                             std::uint32_t pgn,
+	                                                                             std::uint32_t parameterGroupNumber,
 	                                                                             std::uint16_t totalMessageSize,
 	                                                                             std::uint8_t totalNumberOfPackets,
 	                                                                             std::uint8_t clearToSendPacketMax,
@@ -34,7 +34,7 @@ namespace isobus
 	                                                                             TransmitCompleteCallback sessionCompleteCallback,
 	                                                                             void *parentPointer) :
 	  direction(direction),
-	  parameterGroupNumber(pgn),
+	  parameterGroupNumber(parameterGroupNumber),
 	  data(std::move(data)),
 	  totalMessageSize(totalMessageSize),
 	  source(source),
@@ -96,7 +96,7 @@ namespace isobus
 		return (nullptr == destination);
 	}
 
-	TransportProtocolManager::TransportProtocolSession TransportProtocolManager::TransportProtocolSession::create_receive_session(std::uint32_t pgn,
+	TransportProtocolManager::TransportProtocolSession TransportProtocolManager::TransportProtocolSession::create_receive_session(std::uint32_t parameterGroupNumber,
 	                                                                                                                              std::uint16_t totalMessageSize,
 	                                                                                                                              std::uint8_t totalNumberOfPackets,
 	                                                                                                                              std::uint8_t clearToSendPacketMax,
@@ -105,7 +105,7 @@ namespace isobus
 	{
 		return TransportProtocolSession(TransportProtocolSession::Direction::Receive,
 		                                std::make_unique<CANMessageDataVector>(totalMessageSize),
-		                                pgn,
+		                                parameterGroupNumber,
 		                                totalMessageSize,
 		                                totalNumberOfPackets,
 		                                clearToSendPacketMax,
@@ -115,7 +115,7 @@ namespace isobus
 		                                nullptr);
 	}
 
-	TransportProtocolManager::TransportProtocolSession TransportProtocolManager::TransportProtocolSession::create_transmit_session(std::uint32_t pgn,
+	TransportProtocolManager::TransportProtocolSession TransportProtocolManager::TransportProtocolSession::create_transmit_session(std::uint32_t parameterGroupNumber,
 	                                                                                                                               std::unique_ptr<CANMessageData> data,
 	                                                                                                                               std::shared_ptr<ControlFunction> source,
 	                                                                                                                               std::shared_ptr<ControlFunction> destination,
@@ -132,7 +132,7 @@ namespace isobus
 		}
 		return TransportProtocolSession(TransportProtocolSession::Direction::Transmit,
 		                                std::move(data),
-		                                pgn,
+		                                parameterGroupNumber,
 		                                totalMessageSize,
 		                                totalPacketCount,
 		                                MAX_PACKETS_PER_SEGMENT,
@@ -200,7 +200,7 @@ namespace isobus
 	}
 
 	void TransportProtocolManager::process_broadcast_announce_message(const std::shared_ptr<ControlFunction> source,
-	                                                                  std::uint32_t pgn,
+	                                                                  std::uint32_t parameterGroupNumber,
 	                                                                  std::uint16_t totalMessageSize,
 	                                                                  std::uint8_t totalNumberOfPackets)
 	{
@@ -208,19 +208,19 @@ namespace isobus
 		if (activeSessions.size() >= CANNetworkManager::CANNetwork.get_configuration().get_max_number_transport_protocol_sessions())
 		{
 			// TODO: consider using maximum memory instead of maximum number of sessions
-			CANStackLogger::warn("[TP]: Ignoring Broadcast Announcement Message (BAM) for 0x%05X, configured maximum number of sessions reached.", pgn);
+			CANStackLogger::warn("[TP]: Ignoring Broadcast Announcement Message (BAM) for 0x%05X, configured maximum number of sessions reached.", parameterGroupNumber);
 		}
 		else
 		{
 			if (auto session = get_session(source, nullptr))
 			{
-				CANStackLogger::warn("[TP]: Received Broadcast Announcement Message (BAM) while a session already existed for this source (%hu), overwriting for 0x%05X...", source->get_address(), pgn);
+				CANStackLogger::warn("[TP]: Received Broadcast Announcement Message (BAM) while a session already existed for this source (%hu), overwriting for 0x%05X...", source->get_address(), parameterGroupNumber);
 				close_session(*session, false);
 			}
 
 			auto data = std::make_unique<CANMessageDataVector>(totalMessageSize);
 
-			TransportProtocolSession session = TransportProtocolSession::create_receive_session(pgn,
+			TransportProtocolSession session = TransportProtocolSession::create_receive_session(parameterGroupNumber,
 			                                                                                    totalMessageSize,
 			                                                                                    totalNumberOfPackets,
 			                                                                                    0xFF, // Arbitrary - unused for broadcast
@@ -229,13 +229,13 @@ namespace isobus
 			session.set_state(StateMachineState::RxDataSession);
 			activeSessions.push_back(std::move(session));
 
-			CANStackLogger::debug("[TP]: New rx broadcast message session for 0x%05X. Source: %hu", pgn, source->get_address());
+			CANStackLogger::debug("[TP]: New rx broadcast message session for 0x%05X. Source: %hu", parameterGroupNumber, source->get_address());
 		}
 	}
 
 	void TransportProtocolManager::process_request_to_send(const std::shared_ptr<ControlFunction> source,
 	                                                       const std::shared_ptr<ControlFunction> destination,
-	                                                       std::uint32_t pgn,
+	                                                       std::uint32_t parameterGroupNumber,
 	                                                       std::uint16_t totalMessageSize,
 	                                                       std::uint8_t totalNumberOfPackets,
 	                                                       std::uint8_t clearToSendPacketMax)
@@ -243,28 +243,28 @@ namespace isobus
 		if (activeSessions.size() >= CANNetworkManager::CANNetwork.get_configuration().get_max_number_transport_protocol_sessions())
 		{
 			// TODO: consider using maximum memory instead of maximum number of sessions
-			CANStackLogger::warn("[TP]: Replying with abort to Request To Send (RTS) for 0x%05X, configured maximum number of sessions reached.", pgn);
-			send_abort(std::static_pointer_cast<InternalControlFunction>(destination), source, pgn, ConnectionAbortReason::AlreadyInCMSession);
+			CANStackLogger::warn("[TP]: Replying with abort to Request To Send (RTS) for 0x%05X, configured maximum number of sessions reached.", parameterGroupNumber);
+			send_abort(std::static_pointer_cast<InternalControlFunction>(destination), source, parameterGroupNumber, ConnectionAbortReason::AlreadyInCMSession);
 		}
 		else
 		{
 			if (auto session = get_session(source, destination))
 			{
-				if (session->get_parameter_group_number() != pgn)
+				if (session->get_parameter_group_number() != parameterGroupNumber)
 				{
-					CANStackLogger::error("[TP]: Received Request To Send (RTS) while a session already existed for this source and destination, aborting for 0x%05X...", pgn);
+					CANStackLogger::error("[TP]: Received Request To Send (RTS) while a session already existed for this source and destination, aborting for 0x%05X...", parameterGroupNumber);
 					abort_session(*session, ConnectionAbortReason::AlreadyInCMSession);
 				}
 				else
 				{
-					CANStackLogger::warn("[TP]: Received Request To Send (RTS) while a session already existed for this source and destination and pgn, overwriting for 0x%05X...", pgn);
+					CANStackLogger::warn("[TP]: Received Request To Send (RTS) while a session already existed for this source and destination and parameterGroupNumber, overwriting for 0x%05X...", parameterGroupNumber);
 					close_session(*session, false);
 				}
 			}
 
 			auto data = std::make_unique<CANMessageDataVector>(totalMessageSize);
 
-			TransportProtocolSession session = TransportProtocolSession::create_receive_session(pgn,
+			TransportProtocolSession session = TransportProtocolSession::create_receive_session(parameterGroupNumber,
 			                                                                                    totalMessageSize,
 			                                                                                    totalNumberOfPackets,
 			                                                                                    clearToSendPacketMax,
@@ -277,27 +277,27 @@ namespace isobus
 
 	void TransportProtocolManager::process_clear_to_send(const std::shared_ptr<ControlFunction> source,
 	                                                     const std::shared_ptr<ControlFunction> destination,
-	                                                     std::uint32_t pgn,
+	                                                     std::uint32_t parameterGroupNumber,
 	                                                     std::uint8_t packetsToBeSent,
 	                                                     std::uint8_t nextPacketNumber)
 	{
 		if (auto session = get_session(source, destination))
 		{
-			if (session->get_parameter_group_number() != pgn)
+			if (session->get_parameter_group_number() != parameterGroupNumber)
 			{
-				CANStackLogger::error("[TP]: Received a Clear To Send (CTS) message for 0x%05X while a session already existed for this source and destination, sending abort for both...", pgn);
+				CANStackLogger::error("[TP]: Received a Clear To Send (CTS) message for 0x%05X while a session already existed for this source and destination, sending abort for both...", parameterGroupNumber);
 				abort_session(*session, ConnectionAbortReason::AnyOtherError);
-				send_abort(std::static_pointer_cast<InternalControlFunction>(destination), source, pgn, ConnectionAbortReason::AnyOtherError);
+				send_abort(std::static_pointer_cast<InternalControlFunction>(destination), source, parameterGroupNumber, ConnectionAbortReason::AnyOtherError);
 			}
 			else if (nextPacketNumber != (session->lastPacketNumber + 1))
 			{
-				CANStackLogger::error("[TP]: Received a Clear To Send (CTS) message for 0x%05X with a bad sequence number, aborting...", pgn);
+				CANStackLogger::error("[TP]: Received a Clear To Send (CTS) message for 0x%05X with a bad sequence number, aborting...", parameterGroupNumber);
 				abort_session(*session, ConnectionAbortReason::BadSequenceNumber);
 			}
 			else if (StateMachineState::WaitForClearToSend != session->state)
 			{
 				// The session exists, but we're not in the right state to receive a CTS, so we must abort
-				CANStackLogger::warn("[TP]: Received a Clear To Send (CTS) message for 0x%05X, but not expecting one, aborting session.", pgn);
+				CANStackLogger::warn("[TP]: Received a Clear To Send (CTS) message for 0x%05X, but not expecting one, aborting session.", parameterGroupNumber);
 				abort_session(*session, ConnectionAbortReason::ClearToSendReceivedWhileTransferInProgress);
 			}
 			else
@@ -316,82 +316,88 @@ namespace isobus
 		else
 		{
 			// We got a CTS but no session exists. Aborting clears up the situation faster than waiting for them to timeout
-			CANStackLogger::warn("[TP]: Received Clear To Send (CTS) for 0x%05X while no session existed for this source and destination, sending abort.", pgn);
-			send_abort(std::static_pointer_cast<InternalControlFunction>(destination), source, pgn, ConnectionAbortReason::AnyOtherError);
+			CANStackLogger::warn("[TP]: Received Clear To Send (CTS) for 0x%05X while no session existed for this source and destination, sending abort.", parameterGroupNumber);
+			send_abort(std::static_pointer_cast<InternalControlFunction>(destination), source, parameterGroupNumber, ConnectionAbortReason::AnyOtherError);
 		}
 	}
 
 	void TransportProtocolManager::process_end_of_session_acknowledgement(const std::shared_ptr<ControlFunction> source,
 	                                                                      const std::shared_ptr<ControlFunction> destination,
-	                                                                      std::uint32_t pgn)
+	                                                                      std::uint32_t parameterGroupNumber)
 	{
 		if (auto session = get_session(source, destination))
 		{
 			if (StateMachineState::WaitForEndOfMessageAcknowledge == session->state)
 			{
-				CANStackLogger::debug("[TP]: Completed rx session for 0x%05X from %hu", pgn, source->get_address());
+				CANStackLogger::debug("[TP]: Completed rx session for 0x%05X from %hu", parameterGroupNumber, source->get_address());
 				session->state = StateMachineState::None;
 				close_session(*session, true);
 			}
 			else
 			{
 				// The session exists, but we're not in the right state to receive an EOM, by the standard we must ignore it
-				CANStackLogger::warn("[TP]: Received an End Of Message Acknowledgement message for 0x%05X, but not expecting one, ignoring.", pgn);
+				CANStackLogger::warn("[TP]: Received an End Of Message Acknowledgement message for 0x%05X, but not expecting one, ignoring.", parameterGroupNumber);
 			}
 		}
 		else
 		{
-			CANStackLogger::warn("[TP]: Received End Of Message Acknowledgement for 0x%05X while no session existed for this source and destination, sending abort.", pgn);
-			send_abort(std::static_pointer_cast<InternalControlFunction>(destination), source, pgn, ConnectionAbortReason::AnyOtherError);
+			CANStackLogger::warn("[TP]: Received End Of Message Acknowledgement for 0x%05X while no session existed for this source and destination, sending abort.", parameterGroupNumber);
+			send_abort(std::static_pointer_cast<InternalControlFunction>(destination), source, parameterGroupNumber, ConnectionAbortReason::AnyOtherError);
 		}
 	}
 
 	void TransportProtocolManager::process_abort(const std::shared_ptr<ControlFunction> source,
 	                                             const std::shared_ptr<ControlFunction> destination,
-	                                             std::uint32_t pgn,
+	                                             std::uint32_t parameterGroupNumber,
 	                                             TransportProtocolManager::ConnectionAbortReason reason)
 	{
 		bool foundSession = false;
 
 		if (auto session = get_session(source, destination))
 		{
-			if (session->get_parameter_group_number() == pgn)
+			if (session->get_parameter_group_number() == parameterGroupNumber)
 			{
 				foundSession = true;
-				CANStackLogger::error("[TP]: Received an abort (reason=%hu) for an rx session for PGN 0x%05X", static_cast<uint8_t>(reason), pgn);
+				CANStackLogger::error("[TP]: Received an abort (reason=%hu) for an rx session for parameterGroupNumber 0x%05X", static_cast<std::uint8_t>(reason), parameterGroupNumber);
 				close_session(*session, false);
 			}
 		}
 		if (auto session = get_session(destination, source))
 		{
-			if (session->get_parameter_group_number() == pgn)
+			if (session->get_parameter_group_number() == parameterGroupNumber)
 			{
 				foundSession = true;
-				CANStackLogger::error("[TP]: Received an abort (reason=%hu) for a tx session for PGN 0x%05X", static_cast<uint8_t>(reason), pgn);
+				CANStackLogger::error("[TP]: Received an abort (reason=%hu) for a tx session for parameterGroupNumber 0x%05X", static_cast<std::uint8_t>(reason), parameterGroupNumber);
 				close_session(*session, false);
 			}
 		}
 
 		if (!foundSession)
 		{
-			CANStackLogger::warn("[TP]: Received an abort (reason=%hu) with no matching session for PGN 0x%05X", static_cast<uint8_t>(reason), pgn);
+			CANStackLogger::warn("[TP]: Received an abort (reason=%hu) with no matching session for parameterGroupNumber 0x%05X", static_cast<std::uint8_t>(reason), parameterGroupNumber);
 		}
 	}
 
 	void TransportProtocolManager::process_connection_management_message(const CANMessage &message)
 	{
-		const auto pgn = message.get_uint24_at(5);
+		if (CAN_DATA_LENGTH != message.get_data_length())
+		{
+			CANStackLogger::warn("[TP]: Received a Connection Management message of invalid length %hu", message.get_data_length());
+			return;
+		}
+
+		const auto parameterGroupNumber = message.get_uint24_at(5);
 
 		switch (message.get_uint8_at(0))
 		{
 			case BROADCAST_ANNOUNCE_MESSAGE_MULTIPLEXOR:
 			{
-				if (message.is_destination_global())
+				if (message.is_broadcast())
 				{
 					const auto totalMessageSize = message.get_uint16_at(1);
 					const auto totalNumberOfPackets = message.get_uint8_at(3);
 					process_broadcast_announce_message(message.get_source_control_function(),
-					                                   pgn,
+					                                   parameterGroupNumber,
 					                                   totalMessageSize,
 					                                   totalNumberOfPackets);
 				}
@@ -404,7 +410,7 @@ namespace isobus
 
 			case REQUEST_TO_SEND_MULTIPLEXOR:
 			{
-				if (message.is_destination_global())
+				if (message.is_broadcast())
 				{
 					CANStackLogger::warn("[TP]: Received a Request to Send (RTS) message with a global destination, ignoring");
 				}
@@ -415,7 +421,7 @@ namespace isobus
 					const auto clearToSendPacketMax = message.get_uint8_at(4);
 					process_request_to_send(message.get_source_control_function(),
 					                        message.get_destination_control_function(),
-					                        pgn,
+					                        parameterGroupNumber,
 					                        totalMessageSize,
 					                        totalNumberOfPackets,
 					                        clearToSendPacketMax);
@@ -425,7 +431,7 @@ namespace isobus
 
 			case CLEAR_TO_SEND_MULTIPLEXOR:
 			{
-				if (message.is_destination_global())
+				if (message.is_broadcast())
 				{
 					CANStackLogger::warn("[TP]: Received a Clear to Send (CTS) message with a global destination, ignoring");
 				}
@@ -435,7 +441,7 @@ namespace isobus
 					const auto nextPacketNumber = message.get_uint8_at(2);
 					process_clear_to_send(message.get_source_control_function(),
 					                      message.get_destination_control_function(),
-					                      pgn,
+					                      parameterGroupNumber,
 					                      packetsToBeSent,
 					                      nextPacketNumber);
 				}
@@ -444,7 +450,7 @@ namespace isobus
 
 			case END_OF_MESSAGE_ACKNOWLEDGE_MULTIPLEXOR:
 			{
-				if (message.is_destination_global())
+				if (message.is_broadcast())
 				{
 					CANStackLogger::warn("[TP]: Received an End of Message Acknowledge message with a global destination, ignoring");
 				}
@@ -452,14 +458,14 @@ namespace isobus
 				{
 					process_end_of_session_acknowledgement(message.get_source_control_function(),
 					                                       message.get_destination_control_function(),
-					                                       pgn);
+					                                       parameterGroupNumber);
 				}
 			}
 			break;
 
 			case CONNECTION_ABORT_MULTIPLEXOR:
 			{
-				if (message.is_destination_global())
+				if (message.is_broadcast())
 				{
 					CANStackLogger::warn("[TP]: Received an Abort message with a global destination, ignoring");
 				}
@@ -468,7 +474,7 @@ namespace isobus
 					const auto reason = static_cast<ConnectionAbortReason>(message.get_uint8_at(1));
 					process_abort(message.get_source_control_function(),
 					              message.get_destination_control_function(),
-					              pgn,
+					              parameterGroupNumber,
 					              reason);
 				}
 			}
@@ -476,7 +482,7 @@ namespace isobus
 
 			default:
 			{
-				CANStackLogger::CAN_stack_log(CANStackLogger::LoggingLevel::Warning, "[TP]: Bad Mux in Transport Protocol Connection Management message");
+				CANStackLogger::warn("[TP]: Bad Mux in Transport Protocol Connection Management message");
 			}
 			break;
 		}
@@ -484,8 +490,14 @@ namespace isobus
 
 	void TransportProtocolManager::process_data_transfer_message(const CANMessage &message)
 	{
+		if (CAN_DATA_LENGTH != message.get_data_length())
+		{
+			CANStackLogger::warn("[TP]: Received a Data Transfer message of invalid length %hu", message.get_data_length());
+			return;
+		}
+
 		auto source = message.get_source_control_function();
-		auto destination = message.is_destination_global() ? nullptr : message.get_destination_control_function();
+		auto destination = message.is_broadcast() ? nullptr : message.get_destination_control_function();
 
 		auto packetNumber = message.get_uint8_at(SEQUENCE_NUMBER_DATA_INDEX);
 
@@ -516,7 +528,7 @@ namespace isobus
 				if ((session->lastPacketNumber * PROTOCOL_BYTES_PER_FRAME) >= session->get_message_length())
 				{
 					// Send End of Message Acknowledgement for sessions with specific destination only
-					if (!message.is_destination_global())
+					if (!message.is_broadcast())
 					{
 						send_end_of_session_acknowledgement(*session);
 					}
@@ -547,7 +559,7 @@ namespace isobus
 				abort_session(*session, ConnectionAbortReason::BadSequenceNumber);
 			}
 		}
-		else if (!message.is_destination_global())
+		else if (!message.is_broadcast())
 		{
 			CANStackLogger::warn("[TP]: Received a Data Transfer message from %hu with no matching session, ignoring...", source->get_address());
 		}
@@ -556,33 +568,19 @@ namespace isobus
 	void TransportProtocolManager::process_message(const CANMessage &message)
 	{
 		// TODO: Allow sniffing of messages to all addresses, not just the ones we normally listen to (#297)
-		if (message.has_valid_source_control_function() && (message.has_valid_destination_control_function() || message.is_destination_global()))
+		if (message.has_valid_source_control_function() && (message.has_valid_destination_control_function() || message.is_broadcast()))
 		{
 			switch (message.get_identifier().get_parameter_group_number())
 			{
 				case static_cast<std::uint32_t>(CANLibParameterGroupNumber::TransportProtocolConnectionManagement):
 				{
-					if (CAN_DATA_LENGTH == message.get_data_length())
-					{
-						process_connection_management_message(message);
-					}
-					else
-					{
-						CANStackLogger::warn("[TP]: Received a Connection Management message of invalid length %hu", message.get_data_length());
-					}
+					process_connection_management_message(message);
 				}
 				break;
 
 				case static_cast<std::uint32_t>(CANLibParameterGroupNumber::TransportProtocolDataTransfer):
 				{
-					if (CAN_DATA_LENGTH == message.get_data_length())
-					{
-						process_data_transfer_message(message);
-					}
-					else
-					{
-						CANStackLogger::warn("[TP]: Received a Data Transfer message of invalid length %hu", message.get_data_length());
-					}
+					process_data_transfer_message(message);
 				}
 				break;
 
@@ -971,16 +969,16 @@ namespace isobus
 		if (auto ourControlFunction = session.get_destination())
 		{
 			std::uint32_t messageLength = session.get_message_length();
-			std::uint32_t pgn = session.get_parameter_group_number();
+			std::uint32_t parameterGroupNumber = session.get_parameter_group_number();
 			const std::array<std::uint8_t, CAN_DATA_LENGTH> buffer{
 				END_OF_MESSAGE_ACKNOWLEDGE_MULTIPLEXOR,
 				static_cast<std::uint8_t>(messageLength & 0xFF),
 				static_cast<std::uint8_t>((messageLength >> 8) & 0xFF),
 				session.get_total_number_of_packets(),
 				0xFF,
-				static_cast<std::uint8_t>(pgn & 0xFF),
-				static_cast<std::uint8_t>((pgn >> 8) & 0xFF),
-				static_cast<std::uint8_t>((pgn >> 16) & 0xFF),
+				static_cast<std::uint8_t>(parameterGroupNumber & 0xFF),
+				static_cast<std::uint8_t>((parameterGroupNumber >> 8) & 0xFF),
+				static_cast<std::uint8_t>((parameterGroupNumber >> 16) & 0xFF),
 			};
 
 			retVal = CANNetworkManager::CANNetwork.send_can_message(static_cast<std::uint32_t>(CANLibParameterGroupNumber::TransportProtocolConnectionManagement),
@@ -991,7 +989,7 @@ namespace isobus
 		}
 		else
 		{
-			CANStackLogger::CAN_stack_log(CANStackLogger::LoggingLevel::Warning, "[TP]: Attempted to send EOM to null session");
+			CANStackLogger::warn("[TP]: Attempted to send EOM to null session");
 		}
 		return retVal;
 	}

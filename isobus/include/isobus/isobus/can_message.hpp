@@ -87,8 +87,8 @@ namespace isobus
 		bool has_valid_destination_control_function() const;
 
 		/// @brief Returns whether the message is sent as a broadcast message / to all devices on the bus.
-		/// @returns True if the destination of the message is global, false otherwise
-		bool is_destination_global() const;
+		/// @returns True if the destination of the message is everyone, false otherwise
+		bool is_broadcast() const;
 
 		/// @brief Returns whether the message is destined for our device on the bus.
 		/// @returns True if the message is destined for our device, false otherwise
