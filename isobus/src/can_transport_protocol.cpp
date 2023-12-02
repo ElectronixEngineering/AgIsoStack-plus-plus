@@ -594,7 +594,7 @@ namespace isobus
 	{
 		if (nullptr != parent)
 		{
-			reinterpret_cast<TransportProtocolManager *>(parent)->process_message(message);
+			static_cast<TransportProtocolManager *>(parent)->process_message(message);
 		}
 	}
 
