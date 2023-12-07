@@ -1197,7 +1197,7 @@ namespace isobus
 		return retVal;
 	}
 
-	bool VirtualTerminalClient::get_vt_version_supported(VTVersion minimumVersion) const
+	bool VirtualTerminalClient::is_vt_version_supported(VTVersion minimumVersion) const
 	{
 		bool retVal = false;
 
@@ -2127,7 +2127,7 @@ namespace isobus
 		{
 			errorCode |= 0x01;
 		}
-		if ((isAlreadyAssigned) && (false == get_vt_version_supported(VTVersion::Version6)))
+		if ((isAlreadyAssigned) && (false == is_vt_version_supported(VTVersion::Version6)))
 		{
 			errorCode |= 0x02;
 		}
@@ -2360,7 +2360,7 @@ namespace isobus
 								std::uint16_t objectID = message.get_uint16_at(2);
 								std::uint16_t parentObjectID = message.get_uint16_at(4);
 								std::uint8_t keyNumber = message.get_uint8_at(6);
-								if (parentVT->get_vt_version_supported(VTVersion::Version6))
+								if (parentVT->is_vt_version_supported(VTVersion::Version6))
 								{
 									//! @todo process TAN
 								}
@@ -2378,7 +2378,7 @@ namespace isobus
 								std::uint16_t objectID = message.get_uint16_at(2);
 								std::uint16_t parentObjectID = message.get_uint16_at(4);
 								std::uint8_t keyNumber = message.get_uint8_at(6);
-								if (parentVT->get_vt_version_supported(VTVersion::Version6))
+								if (parentVT->is_vt_version_supported(VTVersion::Version6))
 								{
 									//! @todo process TAN
 								}
@@ -2394,14 +2394,14 @@ namespace isobus
 
 							std::uint8_t touchState = static_cast<std::uint8_t>(KeyActivationCode::ButtonPressedOrLatched);
 							std::uint16_t parentMaskObjectID = NULL_OBJECT_ID;
-							if (parentVT->get_vt_version_supported(VTVersion::Version6))
+							if (parentVT->is_vt_version_supported(VTVersion::Version6))
 							{
 								// VT version is at least 6
 								touchState = message.get_uint8_at(5) & 0x0F;
 								parentMaskObjectID = message.get_uint16_at(6);
 								//! @todo process TAN
 							}
-							else if (parentVT->get_vt_version_supported(VTVersion::Version4))
+							else if (parentVT->is_vt_version_supported(VTVersion::Version4))
 							{
 								// VT version is either 4 or 5
 								touchState = message.get_uint8_at(5);
@@ -2420,12 +2420,12 @@ namespace isobus
 							bool objectSelected = (0x01 == message.get_uint8_at(3));
 							bool objectOpenForInput = true;
 
-							if (parentVT->get_vt_version_supported(VTVersion::Version4))
+							if (parentVT->is_vt_version_supported(VTVersion::Version4))
 							{
 								objectOpenForInput = message.get_bool_at(4, 0);
 							}
 
-							if (parentVT->get_vt_version_supported(VTVersion::Version6))
+							if (parentVT->is_vt_version_supported(VTVersion::Version6))
 							{
 								//! @todo process TAN
 							}
@@ -2441,7 +2441,7 @@ namespace isobus
 							if ((errorCode == static_cast<std::uint8_t>(ESCMessageErrorCode::OtherError)) ||
 							    (errorCode <= static_cast<std::uint8_t>(ESCMessageErrorCode::NoInputFieldOpen)))
 							{
-								if (parentVT->get_vt_version_supported(VTVersion::Version6))
+								if (parentVT->is_vt_version_supported(VTVersion::Version6))
 								{
 									//! @todo process TAN
 								}
@@ -2456,7 +2456,7 @@ namespace isobus
 							std::uint16_t objectID = message.get_uint16_at(1);
 							std::uint32_t value = message.get_uint32_at(4);
 
-							if (parentVT->get_vt_version_supported(VTVersion::Version6))
+							if (parentVT->is_vt_version_supported(VTVersion::Version6))
 							{
 								//! @todo process TAN
 							}
@@ -2532,7 +2532,7 @@ namespace isobus
 								parentVT->userLayoutHideShowEventDispatcher.invoke({ parentVT, objectID, hidden });
 							}
 
-							if (parentVT->get_vt_version_supported(VTVersion::Version6))
+							if (parentVT->is_vt_version_supported(VTVersion::Version6))
 							{
 								//! @todo process TAN
 							}
@@ -2545,7 +2545,7 @@ namespace isobus
 
 							parentVT->audioSignalTerminationEventDispatcher.invoke({ parentVT, terminated });
 
-							if (parentVT->get_vt_version_supported(VTVersion::Version6))
+							if (parentVT->is_vt_version_supported(VTVersion::Version6))
 							{
 								//! @todo process TAN
 							}
@@ -2692,7 +2692,7 @@ namespace isobus
 							// bool inputActive = message.get_bool_at(7, 1); // Only in learn mode?
 							// bool controlIsLocked = false;
 							// bool interactionWhileLocked = false;
-							if (parentVT->get_vt_version_supported(VTVersion::Version6))
+							if (parentVT->is_vt_version_supported(VTVersion::Version6))
 							{
 								// controlIsLocked = message.get_bool_at(7, 2);
 								// interactionWhileLocked = message.get_bool_at(7, 3);
