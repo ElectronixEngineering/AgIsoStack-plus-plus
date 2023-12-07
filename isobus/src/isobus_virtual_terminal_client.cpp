@@ -250,11 +250,6 @@ namespace isobus
 		}
 	}
 
-	void VirtualTerminalClient::set_should_queue_commands(const bool shouldQueueCommands)
-	{
-		commandQueueEnabled = shouldQueueCommands;
-	}
-
 	isobus::VirtualTerminalClient::AssignedAuxiliaryFunction::AssignedAuxiliaryFunction(const std::uint16_t functionObjectID, const std::uint16_t inputObjectID, const AuxiliaryTypeTwoFunctionType functionType) :
 	  functionObjectID(functionObjectID), inputObjectID(inputObjectID), functionType(functionType)
 	{
@@ -3067,6 +3062,49 @@ namespace isobus
 							}
 						}
 						break;
+
+						case static_cast<std::uint8_t>(Function::HideShowObjectCommand):
+						case static_cast<std::uint8_t>(Function::EnableDisableObjectCommand):
+						case static_cast<std::uint8_t>(Function::SelectInputObjectCommand):
+						case static_cast<std::uint8_t>(Function::ESCCommand):
+						case static_cast<std::uint8_t>(Function::ControlAudioSignalCommand):
+						case static_cast<std::uint8_t>(Function::SetAudioVolumeCommand):
+						case static_cast<std::uint8_t>(Function::ChangeChildLocationCommand):
+						case static_cast<std::uint8_t>(Function::ChangeChildPositionCommand):
+						case static_cast<std::uint8_t>(Function::ChangeSizeCommand):
+						case static_cast<std::uint8_t>(Function::ChangeBackgroundColourCommand):
+						case static_cast<std::uint8_t>(Function::ChangeNumericValueCommand):
+						case static_cast<std::uint8_t>(Function::ChangeStringValueCommand):
+						case static_cast<std::uint8_t>(Function::ChangeEndPointCommand):
+						case static_cast<std::uint8_t>(Function::ChangeFontAttributesCommand):
+						case static_cast<std::uint8_t>(Function::ChangeLineAttributesCommand):
+						case static_cast<std::uint8_t>(Function::ChangeFillAttributesCommand):
+						case static_cast<std::uint8_t>(Function::ChangeActiveMaskCommand):
+						case static_cast<std::uint8_t>(Function::ChangeSoftKeyMaskCommand):
+						case static_cast<std::uint8_t>(Function::ChangeAttributeCommand):
+						case static_cast<std::uint8_t>(Function::ChangePriorityCommand):
+						case static_cast<std::uint8_t>(Function::ChangeListItemCommand):
+						case static_cast<std::uint8_t>(Function::DeleteObjectPoolCommand):
+						case static_cast<std::uint8_t>(Function::LockUnlockMaskCommand):
+						case static_cast<std::uint8_t>(Function::ExecuteMacroCommand):
+						case static_cast<std::uint8_t>(Function::ChangeObjectLabelCommand):
+						case static_cast<std::uint8_t>(Function::ChangePolygonPointCommand):
+						case static_cast<std::uint8_t>(Function::ChangePolygonScaleCommand):
+						case static_cast<std::uint8_t>(Function::GraphicsContextCommand):
+						case static_cast<std::uint8_t>(Function::GetAttributeValueMessage):
+						case static_cast<std::uint8_t>(Function::SelectColourMapCommand):
+						case static_cast<std::uint8_t>(Function::ExecuteExtendedMacroCommand):
+						case static_cast<std::uint8_t>(Function::SelectActiveWorkingSet):
+						{
+							// By checking if it's a response with our control functions, we verify that it's a response to a request we sent.
+							// This because we only support Working Set Masters at the moment.
+							if ((parentVT->myControlFunction == message.get_destination_control_function()) &&
+							    (parentVT->partnerControlFunction == message.get_source_control_function()))
+							{
+								parentVT->commandAwaitingResponse = false;
+							}
+						}
+						break;
 					}
 				}
 				break;
@@ -4322,20 +4360,30 @@ namespace isobus
 		return retVal;
 	}
 
-	bool VirtualTerminalClient::send_command(const std::vector<std::uint8_t> &data, CANIdentifier::CANPriority priority) const
+	bool VirtualTerminalClient::send_command(const std::vector<std::uint8_t> &data, CANIdentifier::CANPriority priority)
 	{
+		if (commandAwaitingResponse)
+		{
+			return false;
+		}
+
 		if (!get_is_connected())
 		{
 			CANStackLogger::error("[VT]: Cannot send command, not connected");
 			return false;
 		}
 
-		return CANNetworkManager::CANNetwork.send_can_message(static_cast<std::uint32_t>(CANLibParameterGroupNumber::ECUtoVirtualTerminal),
-		                                                      data.data(),
-		                                                      data.size(),
-		                                                      myControlFunction,
-		                                                      partnerControlFunction,
-		                                                      priority);
+		bool success = CANNetworkManager::CANNetwork.send_can_message(static_cast<std::uint32_t>(CANLibParameterGroupNumber::ECUtoVirtualTerminal),
+		                                                              data.data(),
+		                                                              data.size(),
+		                                                              myControlFunction,
+		                                                              partnerControlFunction,
+		                                                              priority);
+		if (success)
+		{
+			commandAwaitingResponse = true;
+		}
+		return success;
 	}
 
 	bool VirtualTerminalClient::queue_command(const std::vector<std::uint8_t> &data, CANIdentifier::CANPriority priority, bool replace)
@@ -4343,11 +4391,6 @@ namespace isobus
 		if (send_command(data, priority))
 		{
 			return true;
-		}
-
-		if (!commandQueueEnabled)
-		{
-			return false;
 		}
 
 		if (replace && replace_command(data, priority))
