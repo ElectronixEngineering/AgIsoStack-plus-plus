@@ -212,22 +212,23 @@ namespace isobus
 		}
 		else
 		{
-			if (auto session = get_session(source, nullptr))
+			auto oldSession = get_session(source, nullptr);
+			if (nullptr != oldSession)
 			{
 				CANStackLogger::warn("[TP]: Received Broadcast Announcement Message (BAM) while a session already existed for this source (%hu), overwriting for 0x%05X...", source->get_address(), parameterGroupNumber);
-				close_session(*session, false);
+				close_session(*oldSession, false);
 			}
 
 			auto data = std::make_unique<CANMessageDataVector>(totalMessageSize);
 
-			TransportProtocolSession session = TransportProtocolSession::create_receive_session(parameterGroupNumber,
-			                                                                                    totalMessageSize,
-			                                                                                    totalNumberOfPackets,
-			                                                                                    0xFF, // Arbitrary - unused for broadcast
-			                                                                                    source,
-			                                                                                    nullptr); // Global destination
-			session.set_state(StateMachineState::RxDataSession);
-			activeSessions.push_back(std::move(session));
+			TransportProtocolSession newSession = TransportProtocolSession::create_receive_session(parameterGroupNumber,
+			                                                                                       totalMessageSize,
+			                                                                                       totalNumberOfPackets,
+			                                                                                       0xFF, // Arbitrary - unused for broadcast
+			                                                                                       source,
+			                                                                                       nullptr); // Global destination
+			newSession.set_state(StateMachineState::RxDataSession);
+			activeSessions.push_back(std::move(newSession));
 
 			CANStackLogger::debug("[TP]: New rx broadcast message session for 0x%05X. Source: %hu", parameterGroupNumber, source->get_address());
 		}
@@ -248,30 +249,31 @@ namespace isobus
 		}
 		else
 		{
-			if (auto session = get_session(source, destination))
+			auto oldSession = get_session(source, destination);
+			if (nullptr != oldSession)
 			{
-				if (session->get_parameter_group_number() != parameterGroupNumber)
+				if (oldSession->get_parameter_group_number() != parameterGroupNumber)
 				{
 					CANStackLogger::error("[TP]: Received Request To Send (RTS) while a session already existed for this source and destination, aborting for 0x%05X...", parameterGroupNumber);
-					abort_session(*session, ConnectionAbortReason::AlreadyInCMSession);
+					abort_session(*oldSession, ConnectionAbortReason::AlreadyInCMSession);
 				}
 				else
 				{
 					CANStackLogger::warn("[TP]: Received Request To Send (RTS) while a session already existed for this source and destination and parameterGroupNumber, overwriting for 0x%05X...", parameterGroupNumber);
-					close_session(*session, false);
+					close_session(*oldSession, false);
 				}
 			}
 
 			auto data = std::make_unique<CANMessageDataVector>(totalMessageSize);
 
-			TransportProtocolSession session = TransportProtocolSession::create_receive_session(parameterGroupNumber,
-			                                                                                    totalMessageSize,
-			                                                                                    totalNumberOfPackets,
-			                                                                                    clearToSendPacketMax,
-			                                                                                    source,
-			                                                                                    destination);
-			session.set_state(StateMachineState::ClearToSend);
-			activeSessions.push_back(std::move(session));
+			TransportProtocolSession newSession = TransportProtocolSession::create_receive_session(parameterGroupNumber,
+			                                                                                       totalMessageSize,
+			                                                                                       totalNumberOfPackets,
+			                                                                                       clearToSendPacketMax,
+			                                                                                       source,
+			                                                                                       destination);
+			newSession.set_state(StateMachineState::ClearToSend);
+			activeSessions.push_back(std::move(newSession));
 		}
 	}
 
@@ -281,7 +283,8 @@ namespace isobus
 	                                                     std::uint8_t packetsToBeSent,
 	                                                     std::uint8_t nextPacketNumber)
 	{
-		if (auto session = get_session(source, destination))
+		auto session = get_session(source, destination);
+		if (nullptr != session)
 		{
 			if (session->get_parameter_group_number() != parameterGroupNumber)
 			{
@@ -325,7 +328,8 @@ namespace isobus
 	                                                                      const std::shared_ptr<ControlFunction> destination,
 	                                                                      std::uint32_t parameterGroupNumber)
 	{
-		if (auto session = get_session(source, destination))
+		auto session = get_session(source, destination);
+		if (nullptr != session)
 		{
 			if (StateMachineState::WaitForEndOfMessageAcknowledge == session->state)
 			{
@@ -353,23 +357,20 @@ namespace isobus
 	{
 		bool foundSession = false;
 
-		if (auto session = get_session(source, destination))
+		auto session = get_session(source, destination);
+		if ((nullptr != session) && (session->get_parameter_group_number() == parameterGroupNumber))
 		{
-			if (session->get_parameter_group_number() == parameterGroupNumber)
-			{
-				foundSession = true;
-				CANStackLogger::error("[TP]: Received an abort (reason=%hu) for an rx session for parameterGroupNumber 0x%05X", static_cast<std::uint8_t>(reason), parameterGroupNumber);
-				close_session(*session, false);
-			}
+			foundSession = true;
+			CANStackLogger::error("[TP]: Received an abort (reason=%hu) for an rx session for parameterGroupNumber 0x%05X", static_cast<std::uint8_t>(reason), parameterGroupNumber);
+			close_session(*session, false);
 		}
-		if (auto session = get_session(destination, source))
+		session = get_session(destination, source);
+		if ((nullptr != session) && (session->get_parameter_group_number() == parameterGroupNumber))
+
 		{
-			if (session->get_parameter_group_number() == parameterGroupNumber)
-			{
-				foundSession = true;
-				CANStackLogger::error("[TP]: Received an abort (reason=%hu) for a tx session for parameterGroupNumber 0x%05X", static_cast<std::uint8_t>(reason), parameterGroupNumber);
-				close_session(*session, false);
-			}
+			foundSession = true;
+			CANStackLogger::error("[TP]: Received an abort (reason=%hu) for a tx session for parameterGroupNumber 0x%05X", static_cast<std::uint8_t>(reason), parameterGroupNumber);
+			close_session(*session, false);
 		}
 
 		if (!foundSession)
@@ -501,7 +502,8 @@ namespace isobus
 
 		auto packetNumber = message.get_uint8_at(SEQUENCE_NUMBER_DATA_INDEX);
 
-		if (auto session = get_session(source, destination))
+		auto session = get_session(source, destination);
+		if (nullptr != session)
 		{
 			if (StateMachineState::RxDataSession != session->state)
 			{
