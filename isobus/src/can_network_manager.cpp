@@ -33,7 +33,6 @@ namespace isobus
 	{
 		receiveMessageList.clear();
 		initialized = true;
-		transportProtocol.initialize({});
 		extendedTransportProtocol.initialize({});
 	}
 
@@ -378,7 +377,7 @@ namespace isobus
 		prune_inactive_control_functions();
 
 		// Update transport protocols
-		transportProtocol.update({});
+		transportProtocol.update();
 
 		for (std::size_t i = 0; i < CANLibProtocol::get_number_protocols(); i++)
 		{
@@ -605,7 +604,13 @@ namespace isobus
 	}
 
 	CANNetworkManager::CANNetworkManager() :
-	  transportProtocol({})
+	  transportProtocol([this](std::uint32_t parameterGroupNumber,
+	                           CANDataSpan data,
+	                           std::shared_ptr<InternalControlFunction> sourceControlFunction,
+	                           std::shared_ptr<ControlFunction> destinationControlFunction,
+	                           CANIdentifier::CANPriority priority) { return this->send_can_message(parameterGroupNumber, data, sourceControlFunction, destinationControlFunction, priority); },
+	                    [this](const CANMessage &message) { this->protocol_message_callback(message); },
+	                    &configuration)
 	{
 		currentBusloadBitAccumulator.fill(0);
 		lastAddressClaimRequestTimestamp_ms.fill(0);
@@ -1136,6 +1141,7 @@ namespace isobus
 			process_can_message_for_address_violations(currentMessage);
 
 			// Update Special Callbacks, like protocols and non-cf specific ones
+			transportProtocol.process_message(currentMessage);
 			process_protocol_pgn_callbacks(currentMessage);
 			process_any_control_function_pgn_callbacks(currentMessage);
 
@@ -1197,6 +1203,7 @@ namespace isobus
 	void CANNetworkManager::protocol_message_callback(const CANMessage &message)
 	{
 		process_can_message_for_global_and_partner_callbacks(message);
+		process_any_control_function_pgn_callbacks(message);
 		process_can_message_for_commanded_address(message);
 	}
 

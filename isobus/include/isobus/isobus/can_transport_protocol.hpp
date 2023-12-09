@@ -4,6 +4,7 @@
 /// @brief A protocol that handles the ISO11783/J1939 transport protocol.
 /// It handles both the broadcast version (BAM) and and the connection mode version.
 /// @author Adrian Del Grosso
+/// @author Daan Steenbergen
 ///
 /// @copyright 2022 Adrian Del Grosso
 //================================================================================================
@@ -11,11 +12,13 @@
 #ifndef CAN_TRANSPORT_PROTOCOL_HPP
 #define CAN_TRANSPORT_PROTOCOL_HPP
 
-#include "isobus/isobus/can_badge.hpp"
 #include "isobus/isobus/can_control_function.hpp"
 #include "isobus/isobus/can_message.hpp"
 #include "isobus/isobus/can_message_data.hpp"
-#include "isobus/isobus/can_protocol.hpp"
+#include "isobus/isobus/can_message_frame.hpp"
+#include "isobus/isobus/can_network_configuration.hpp"
+
+#include <functional>
 
 namespace isobus
 {
@@ -24,9 +27,9 @@ namespace isobus
 	///
 	/// @brief A class that handles the ISO11783/J1939 transport protocol.
 	/// @details This class handles transmission and reception of CAN messages up to 1785 bytes.
-	/// Both broadcast and connection mode are supported. Simply call send_can_message on the
-	/// network manager with an appropriate data length, and the protocol will be automatically
-	/// selected to be used. As a note, use of BAM is discouraged, as it has profound
+	/// Both broadcast and connection mode are supported. Simply call `CANNetworkManager::send_can_message()`
+	/// with an appropriate data length, and the protocol will be automatically selected to be used.
+	/// @note The use of broadcast messages is discouraged, as it has profound
 	/// packet timing implications for your application, and is limited to only 1 active session at a time.
 	/// That session could be busy if you are using DM1 or any other BAM protocol, causing intermittent
 	/// transmit failures from this class. This is not a bug, rather a limitation of the protocol
@@ -231,6 +234,14 @@ namespace isobus
 			AnyOtherError = 250 ///< Any other error not enumerated above, 0xFE
 		};
 
+		//! @todo Change callback function to take in actual frame
+		using SendCANFrameCallback = std::function<bool(std::uint32_t parameterGroupNumber,
+		                                                CANDataSpan data,
+		                                                std::shared_ptr<InternalControlFunction> sourceControlFunction,
+		                                                std::shared_ptr<ControlFunction> destinationControlFunction,
+		                                                CANIdentifier::CANPriority priority)>; ///< A callback for sending a CAN frame
+		using CANMessageReceivedCallback = std::function<void(const CANMessage &message)>; ///< A callback for when a complete CAN message is received using the TP protocol
+
 		static constexpr std::uint32_t REQUEST_TO_SEND_MULTIPLEXOR = 0x10; ///< TP.CM_RTS Multiplexor
 		static constexpr std::uint32_t CLEAR_TO_SEND_MULTIPLEXOR = 0x11; ///< TP.CM_CTS Multiplexor
 		static constexpr std::uint32_t END_OF_MESSAGE_ACKNOWLEDGE_MULTIPLEXOR = 0x13; ///< TP.CM_EOM_ACK Multiplexor
@@ -244,25 +255,17 @@ namespace isobus
 		static constexpr std::uint8_t MESSAGE_TR_TIMEOUT_MS = 200; ///< The Tr Timeout as defined by the standard
 		static constexpr std::uint8_t PROTOCOL_BYTES_PER_FRAME = 7; ///< The number of payload bytes per frame minus overhead of sequence number
 
-		/// @brief The constructor for the TransportProtocolManager
-		explicit TransportProtocolManager(CANLibBadge<CANNetworkManager>);
+		/// @brief The constructor for the TransportProtocolManager, for advanced use only.
+		/// In most cases, you should use the CANNetworkManager::send_can_message() function to transmit messages.
+		/// @param[in] sendCANFrameCallback A callback for sending a CAN frame to hardware
+		/// @param[in] canMessageReceivedCallback A callback for when a complete CAN message is received using the TP protocol
+		/// @param[in] configuration The configuration to use for this protocol
+		TransportProtocolManager(SendCANFrameCallback sendCANFrameCallback,
+		                         CANMessageReceivedCallback canMessageReceivedCallback,
+		                         const CANNetworkConfiguration *configuration);
 
-		/// @brief The destructor for the TransportProtocolManager
-		~TransportProtocolManager() = default;
-
-		/// @brief The protocol's initializer function
-		/// @returns true if the protocol was initialized, otherwise false
-		bool initialize(CANLibBadge<CANNetworkManager>);
-
-		/// @brief Returns if the protocol has been initialized
-		/// @returns true if the protocol has been initialized, otherwise false
-		bool get_initialized() const;
-
-		/// @brief The protocol's terminate function
-		void terminate(CANLibBadge<CANNetworkManager>);
-
-		/// @brief Updates the transport protocol
-		void update(CANLibBadge<CANNetworkManager>);
+		/// @brief Updates all sessions managed by this protocol manager instance.
+		void update();
 
 		///@brief Sends data transfer packets for the specified TransportProtocolSession.
 		/// @param[in] session The TransportProtocolSession for which to send data transfer packets.
@@ -316,11 +319,6 @@ namespace isobus
 		/// @brief A generic way for a protocol to process a received message
 		/// @param[in] message A received CAN message
 		void process_message(const CANMessage &message);
-
-		/// @brief A generic way for a protocol to process a received message
-		/// @param[in] message The CAN message to be processed.
-		/// @param[in] parent A pointer to the parent object.
-		static void process_message(const CANMessage &message, void *parent);
 
 		/// @brief The network manager calls this to see if the protocol can accept a long CAN message for processing
 		/// @param[in] parameterGroupNumber The PGN of the message
@@ -397,7 +395,9 @@ namespace isobus
 		void update_state_machine(TransportProtocolSession &session);
 
 		std::vector<TransportProtocolSession> activeSessions; ///< A list of all active TP sessions
-		bool initialized = false; ///< Denotes if the protocol has been initialized
+		const SendCANFrameCallback sendCANFrameCallback; ///< A callback for sending a CAN frame
+		const CANMessageReceivedCallback canMessageReceivedCallback; ///< A callback for when a complete CAN message is received using the TP protocol
+		const CANNetworkConfiguration *configuration; ///< The configuration to use for this protocol
 	};
 
 } // namespace isobus
