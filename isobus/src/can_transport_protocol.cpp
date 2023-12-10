@@ -847,7 +847,7 @@ namespace isobus
 		                            DataSpanFactory::cfromArray(buffer),
 		                            sender,
 		                            receiver,
-		                            CANIdentifier::CANPriority::PriorityDefault6);
+		                            CANIdentifier::CANPriority::PriorityLowest7);
 	}
 
 	void TransportProtocolManager::close_session(const TransportProtocolSession &session, bool successful)
@@ -892,7 +892,7 @@ namespace isobus
 			                              DataSpanFactory::cfromArray(buffer),
 			                              std::static_pointer_cast<InternalControlFunction>(source),
 			                              nullptr,
-			                              CANIdentifier::CANPriority::PriorityDefault6);
+			                              CANIdentifier::CANPriority::PriorityLowest7);
 		}
 		return retVal;
 	}
@@ -921,7 +921,7 @@ namespace isobus
 			                              DataSpanFactory::cfromArray(buffer),
 			                              std::static_pointer_cast<InternalControlFunction>(ourControlFunction),
 			                              session.get_source(),
-			                              CANIdentifier::CANPriority::PriorityDefault6);
+			                              CANIdentifier::CANPriority::PriorityLowest7);
 		}
 		return retVal;
 	}
@@ -945,7 +945,7 @@ namespace isobus
 			                              DataSpanFactory::cfromArray(buffer),
 			                              std::static_pointer_cast<InternalControlFunction>(source),
 			                              session.get_destination(),
-			                              CANIdentifier::CANPriority::PriorityDefault6);
+			                              CANIdentifier::CANPriority::PriorityLowest7);
 		}
 		return retVal;
 	}
@@ -974,7 +974,7 @@ namespace isobus
 			                              DataSpanFactory::cfromArray(buffer),
 			                              std::static_pointer_cast<InternalControlFunction>(ourControlFunction),
 			                              session.get_source(),
-			                              CANIdentifier::CANPriority::PriorityDefault6);
+			                              CANIdentifier::CANPriority::PriorityLowest7);
 		}
 		else
 		{

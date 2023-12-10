@@ -88,7 +88,7 @@ TEST(DIAGNOSTIC_PROTOCOL_TESTS, MessageEncoding)
 
 		// Broadcast Announce Message
 		EXPECT_EQ(CAN_DATA_LENGTH, testFrame.dataLength);
-		EXPECT_EQ(0x18ECFFAA, testFrame.identifier); // BAM from address AA
+		EXPECT_EQ(0x1CECFFAA, testFrame.identifier); // BAM from address AA
 		EXPECT_EQ(0x20, testFrame.data[0]); // BAM Multiplexer
 		EXPECT_EQ(expectedBAMLength & 0xFF, testFrame.data[1]); // Length LSB
 		EXPECT_EQ((expectedBAMLength >> 8) & 0xFF, testFrame.data[2]); // Length MSB
@@ -241,7 +241,7 @@ TEST(DIAGNOSTIC_PROTOCOL_TESTS, MessageEncoding)
 
 		// Broadcast Announce Message
 		EXPECT_EQ(CAN_DATA_LENGTH, testFrame.dataLength);
-		EXPECT_EQ(0x18ECFFAA, testFrame.identifier); // BAM from address AA
+		EXPECT_EQ(0x1CECFFAA, testFrame.identifier); // BAM from address AA
 		EXPECT_EQ(0x20, testFrame.data[0]); // BAM Multiplexer
 		EXPECT_EQ(expectedBAMLength & 0xFF, testFrame.data[1]); // Length LSB
 		EXPECT_EQ((expectedBAMLength >> 8) & 0xFF, testFrame.data[2]); // Length MSB
@@ -397,7 +397,7 @@ TEST(DIAGNOSTIC_PROTOCOL_TESTS, MessageEncoding)
 
 		// Broadcast Announce Message
 		EXPECT_EQ(CAN_DATA_LENGTH, testFrame.dataLength);
-		EXPECT_EQ(0x18ECFFAA, testFrame.identifier); // BAM from address AA
+		EXPECT_EQ(0x1CECFFAA, testFrame.identifier); // BAM from address AA
 		EXPECT_EQ(0x20, testFrame.data[0]); // BAM Multiplexer
 		EXPECT_EQ(expectedBAMLength & 0xFF, testFrame.data[1]); // Length LSB
 		EXPECT_EQ((expectedBAMLength >> 8) & 0xFF, testFrame.data[2]); // Length MSB
@@ -542,7 +542,7 @@ TEST(DIAGNOSTIC_PROTOCOL_TESTS, MessageEncoding)
 
 		// Broadcast Announce Message
 		EXPECT_EQ(CAN_DATA_LENGTH, testFrame.dataLength);
-		EXPECT_EQ(0x18ECFFAA, testFrame.identifier); // BAM from address AA
+		EXPECT_EQ(0x1CECFFAA, testFrame.identifier); // BAM from address AA
 		EXPECT_EQ(0x20, testFrame.data[0]); // BAM Multiplexer
 		EXPECT_EQ(expectedBAMLength & 0xFF, testFrame.data[1]); // Length LSB
 		EXPECT_EQ((expectedBAMLength >> 8) & 0xFF, testFrame.data[2]); // Length MSB
@@ -733,7 +733,7 @@ TEST(DIAGNOSTIC_PROTOCOL_TESTS, MessageEncoding)
 
 		// Broadcast Announce Message
 		EXPECT_EQ(CAN_DATA_LENGTH, testFrame.dataLength);
-		EXPECT_EQ(0x18ECFFAA, testFrame.identifier); // BAM from address AA
+		EXPECT_EQ(0x1CECFFAA, testFrame.identifier); // BAM from address AA
 		EXPECT_EQ(0x20, testFrame.data[0]); // BAM Multiplexer
 		EXPECT_EQ(expectedBAMLength & 0xFF, testFrame.data[1]); // Length LSB
 		EXPECT_EQ((expectedBAMLength >> 8) & 0xFF, testFrame.data[2]); // Length MSB
@@ -792,7 +792,7 @@ TEST(DIAGNOSTIC_PROTOCOL_TESTS, MessageEncoding)
 
 		// Broadcast Announce Message
 		EXPECT_EQ(CAN_DATA_LENGTH, testFrame.dataLength);
-		EXPECT_EQ(0x18ECFFAA, testFrame.identifier); // BAM from address AA
+		EXPECT_EQ(0x1CECFFAA, testFrame.identifier); // BAM from address AA
 		EXPECT_EQ(0x20, testFrame.data[0]); // BAM Multiplexer
 		EXPECT_EQ(expectedBAMLength & 0xFF, testFrame.data[1]); // Length LSB
 		EXPECT_EQ((expectedBAMLength >> 8) & 0xFF, testFrame.data[2]); // Length MSB

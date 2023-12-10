@@ -122,6 +122,18 @@ namespace test_helpers
 		return partnerECU;
 	}
 
+	class WrappedControlFunction : public ControlFunction
+	{
+	public:
+		WrappedControlFunction(NAME name, std::uint8_t address, std::uint8_t canPort) :
+		  ControlFunction(name, address, canPort) {}
+	};
+
+	std::shared_ptr<isobus::ControlFunction> create_mock_control_function(std::uint8_t address)
+	{
+		return std::make_shared<WrappedControlFunction>(NAME(0), address, 0);
+	}
+
 	std::uint32_t create_extended_can_id(std::uint8_t priority,
 	                                     std::uint32_t parameterGroupNumber,
 	                                     std::shared_ptr<isobus::ControlFunction> destination,

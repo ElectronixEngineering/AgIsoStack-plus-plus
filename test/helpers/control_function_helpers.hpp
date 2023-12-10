@@ -10,6 +10,8 @@ namespace test_helpers
 
 	std::shared_ptr<isobus::PartneredControlFunction> force_claim_partnered_control_function(std::uint8_t address, std::uint8_t canPort);
 
+	std::shared_ptr<isobus::ControlFunction> create_mock_control_function(std::uint8_t address);
+
 	std::uint32_t create_extended_can_id(std::uint8_t priority,
 	                                     std::uint32_t parameterGroupNumber,
 	                                     std::shared_ptr<isobus::ControlFunction> destination,
