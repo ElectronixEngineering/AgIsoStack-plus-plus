@@ -12,11 +12,6 @@ namespace test_helpers
 
 	std::shared_ptr<isobus::ControlFunction> create_mock_control_function(std::uint8_t address);
 
-	std::uint32_t create_extended_can_id(std::uint8_t priority,
-	                                     std::uint32_t parameterGroupNumber,
-	                                     std::shared_ptr<isobus::ControlFunction> destination,
-	                                     std::shared_ptr<isobus::ControlFunction> source);
-
 }; // namespace test_helpers
 
 #endif // CONTROL_FUNCTION_HELPERS_HPP

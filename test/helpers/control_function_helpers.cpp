@@ -134,30 +134,4 @@ namespace test_helpers
 		return std::make_shared<WrappedControlFunction>(NAME(0), address, 0);
 	}
 
-	std::uint32_t create_extended_can_id(std::uint8_t priority,
-	                                     std::uint32_t parameterGroupNumber,
-	                                     std::shared_ptr<isobus::ControlFunction> destination,
-	                                     std::shared_ptr<isobus::ControlFunction> source)
-	{
-		std::uint32_t identifier = 0;
-
-		EXPECT_NE(source, nullptr);
-		EXPECT_TRUE(source->get_address_valid());
-		EXPECT_NE(destination, nullptr);
-		EXPECT_TRUE(destination->get_address_valid());
-
-		identifier |= (static_cast<std::uint32_t>(priority) & 0x07) << 26;
-		identifier |= source->get_address();
-
-		// Bounds check the parameter group number
-		EXPECT_TRUE(parameterGroupNumber < 0x3FFFF);
-		EXPECT_TRUE((parameterGroupNumber & 0xF000) < 0xF000);
-		EXPECT_TRUE((parameterGroupNumber & 0xFF) == 0);
-
-		identifier |= (parameterGroupNumber & 0x3FF00) << 8;
-		identifier |= destination->get_address() << 8;
-
-		return identifier;
-	}
-
 }; // namespace test_helpers
