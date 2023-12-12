@@ -146,33 +146,41 @@ namespace isobus
 			/// @param[in] value The state to set the session to
 			void set_state(StateMachineState value);
 
-			/// @brief Get the number of packets to be sent in response to one CTS
-			/// @return The number of packets to be sent in response to one CTS
-			std::uint8_t get_cts_response_packet_count() const;
+			/// @brief Get the number of packets to be sent in response to the current CTS
+			/// @return The number of packets to be sent in response to the current CTS
+			std::uint8_t get_cts_number_of_packets_remaining() const;
 
-			/// @brief Set the number of packets to be sent in response to one CTS
-			/// @param[in] value The number of packets to be sent in response to one CTS
-			void set_cts_response_packet_count(std::uint8_t value);
+			/// @brief Set the number of packets to be sent in response to the curent CTS
+			/// @param[in] value The number of packets to be sent in response to the curent CTS
+			void set_cts_number_of_packets(std::uint8_t value);
 
 			/// @brief Get the maximum number of packets that can be sent per CTS as indicated by the RTS message
 			/// @return The maximum number of packets that can be sent per CTS as indicated by the RTS message
-			std::uint8_t get_cts_response_packet_count_max() const;
+			std::uint8_t get_rts_number_of_packet_limit() const;
+
+			/// @brief Get the last sequence number that was processed
+			/// @return The last sequence number that was processed
+			std::uint8_t get_last_sequence_number() const;
 
 			/// @brief Get the last packet number that was processed
 			/// @return The last packet number that was processed
-			std::uint8_t get_last_packet_number() const;
+			std::uint32_t get_last_packet_number() const;
 
-			/// @brief Set the next packet number that will be processed
-			/// @param[in] value The next packet number that will be processed
-			void set_last_packet_number(std::uint8_t value);
+			/// @brief Set the last sequence number that will be processed
+			/// @param[in] value The last sequence number that will be processed
+			void set_last_sequency_number(std::uint8_t value);
+
+			/// @brief Set the last acknowledged packet number by the receiver
+			/// @param[in] value The last acknowledged packet number by the receiver
+			void set_acknowledged_packet_number(std::uint32_t value);
 
 			/// @brief Get the number of packets that remain to be sent or received in this session
 			/// @return The number of packets that remain to be sent or received in this session
-			std::uint8_t get_remaining_packets() const;
+			std::uint32_t get_number_of_remaining_packets() const;
 
 			/// @brief Get the total number of packets that will be sent or received in this session
 			/// @return The total number of packets that will be sent or received in this session
-			std::uint8_t get_total_number_of_packets() const;
+			std::uint32_t get_total_number_of_packets() const;
 
 		private:
 			/// @brief The constructor for a session
@@ -189,8 +197,8 @@ namespace isobus
 			TransportProtocolSession(Direction direction,
 			                         std::unique_ptr<CANMessageData> data,
 			                         std::uint32_t parameterGroupNumber,
-			                         std::uint16_t totalMessageSize,
-			                         std::uint8_t totalNumberOfPackets,
+			                         std::uint32_t totalMessageSize,
+			                         std::uint32_t totalNumberOfPackets,
 			                         std::uint8_t clearToSendPacketMax,
 			                         std::shared_ptr<ControlFunction> source,
 			                         std::shared_ptr<ControlFunction> destination,
@@ -202,15 +210,16 @@ namespace isobus
 			Direction direction; ///< The direction of the session
 			std::uint32_t parameterGroupNumber; ///< The PGN of the message
 			std::unique_ptr<CANMessageData> data; ///< The data buffer for the message
-			std::uint16_t totalMessageSize; ///< The total size of the message in bytes
+			std::uint32_t totalMessageSize; ///< The total size of the message in bytes
 			std::shared_ptr<ControlFunction> source; ///< The source control function
 			std::shared_ptr<ControlFunction> destination; ///< The destination control function
 
 			std::uint32_t timestamp_ms = 0; ///< A timestamp used to track session timeouts
-			std::uint8_t lastPacketNumber = 0; ///< The last processed sequence number for this set of packets
-			std::uint8_t processedPacketsThisSession = 0; ///< The total processed packet count for the whole session so far
+			std::uint8_t lastSequenceNumber = 0; ///< The last processed sequence number for this set of packets
+			std::uint32_t lastSequenceNumberOffset = 0; ///< The offset of the last sequence number for this set of packets
+			std::uint32_t lastAcknowledgedPacketNumber = 0; ///< The last acknowledged packet number by the receiver
 
-			std::uint8_t totalNumberOfPackets; ///< The total number of packets that will be sent or received in this session
+			std::uint32_t totalNumberOfPackets; ///< The total number of packets that will be sent or received in this session
 			std::uint8_t clearToSendPacketCount = 0; ///< The number of packets to be sent in response to one CTS
 			std::uint8_t clearToSendPacketCountMax = 0xFF; ///< The max packets that can be sent per CTS as indicated by the RTS message
 
@@ -323,7 +332,7 @@ namespace isobus
 		/// @brief Sends the "clear to send" message
 		/// @param[in] session The session for which we're sending the CTS
 		/// @returns true if the CTS was sent, false if sending was not successful
-		bool send_clear_to_send(const TransportProtocolSession &session) const;
+		bool send_clear_to_send(TransportProtocolSession &session) const;
 
 		/// @brief Sends the "request to send" message as part of initiating a transmit
 		/// @param[in] session The session for which we're sending the RTS

@@ -26,8 +26,8 @@ namespace isobus
 	TransportProtocolManager::TransportProtocolSession::TransportProtocolSession(Direction direction,
 	                                                                             std::unique_ptr<CANMessageData> data,
 	                                                                             std::uint32_t parameterGroupNumber,
-	                                                                             std::uint16_t totalMessageSize,
-	                                                                             std::uint8_t totalNumberOfPackets,
+	                                                                             std::uint32_t totalMessageSize,
+	                                                                             std::uint32_t totalNumberOfPackets,
 	                                                                             std::uint8_t clearToSendPacketMax,
 	                                                                             std::shared_ptr<ControlFunction> source,
 	                                                                             std::shared_ptr<ControlFunction> destination,
@@ -122,7 +122,7 @@ namespace isobus
 	                                                                                                                               TransmitCompleteCallback sessionCompleteCallback,
 	                                                                                                                               void *parentPointer)
 	{
-		constexpr std::uint8_t MAX_PACKETS_PER_SEGMENT = 255; //! @todo: make this configurable
+		constexpr std::uint8_t MAX_PACKETS_PER_SEGMENT = 16; //! @todo: make this configurable, the standard recommends 16
 
 		auto totalMessageSize = data->size();
 		auto totalPacketCount = static_cast<std::uint8_t>(totalMessageSize / PROTOCOL_BYTES_PER_FRAME);
@@ -148,38 +148,52 @@ namespace isobus
 		timestamp_ms = SystemTiming::get_timestamp_ms();
 	}
 
-	std::uint8_t TransportProtocolManager::TransportProtocolSession::get_cts_response_packet_count() const
+	std::uint8_t TransportProtocolManager::TransportProtocolSession::get_cts_number_of_packets_remaining() const
 	{
-		return clearToSendPacketCount;
+		// Per definition, the number of packets set since CTS is at most 255, hence we can safely cast to uint8_t
+		auto packetsSinceCTS = static_cast<std::uint8_t>(get_last_packet_number() - lastAcknowledgedPacketNumber);
+		return clearToSendPacketCount - packetsSinceCTS;
 	}
-	void TransportProtocolManager::TransportProtocolSession::set_cts_response_packet_count(std::uint8_t value)
+
+	void TransportProtocolManager::TransportProtocolSession::set_cts_number_of_packets(std::uint8_t value)
 	{
 		clearToSendPacketCount = value;
 		timestamp_ms = SystemTiming::get_timestamp_ms();
 	}
 
-	std::uint8_t TransportProtocolManager::TransportProtocolSession::get_cts_response_packet_count_max() const
+	std::uint8_t TransportProtocolManager::TransportProtocolSession::get_rts_number_of_packet_limit() const
 	{
 		return clearToSendPacketCountMax;
 	}
 
-	std::uint8_t TransportProtocolManager::TransportProtocolSession::get_last_packet_number() const
+	std::uint8_t TransportProtocolManager::TransportProtocolSession::get_last_sequence_number() const
 	{
-		return lastPacketNumber;
+		return lastSequenceNumber;
 	}
 
-	void TransportProtocolManager::TransportProtocolSession::set_last_packet_number(std::uint8_t value)
+	std::uint32_t TransportProtocolManager::TransportProtocolSession::get_last_packet_number() const
 	{
-		lastPacketNumber = value;
+		return lastSequenceNumber + lastSequenceNumberOffset;
+	}
+
+	void TransportProtocolManager::TransportProtocolSession::set_last_sequency_number(std::uint8_t value)
+	{
+		lastSequenceNumber = value;
 		timestamp_ms = SystemTiming::get_timestamp_ms();
 	}
 
-	std::uint8_t TransportProtocolManager::TransportProtocolSession::get_remaining_packets() const
+	void TransportProtocolManager::TransportProtocolSession::set_acknowledged_packet_number(std::uint32_t value)
 	{
-		return static_cast<std::uint8_t>(totalNumberOfPackets - lastPacketNumber);
+		lastAcknowledgedPacketNumber = value;
+		timestamp_ms = SystemTiming::get_timestamp_ms();
 	}
 
-	std::uint8_t TransportProtocolManager::TransportProtocolSession::get_total_number_of_packets() const
+	std::uint32_t TransportProtocolManager::TransportProtocolSession::get_number_of_remaining_packets() const
+	{
+		return totalNumberOfPackets - get_last_packet_number();
+	}
+
+	std::uint32_t TransportProtocolManager::TransportProtocolSession::get_total_number_of_packets() const
 	{
 		return totalNumberOfPackets;
 	}
@@ -277,16 +291,16 @@ namespace isobus
 	                                                     std::uint8_t packetsToBeSent,
 	                                                     std::uint8_t nextPacketNumber)
 	{
-		auto session = get_session(source, destination);
+		auto session = get_session(destination, source);
 		if (nullptr != session)
 		{
 			if (session->get_parameter_group_number() != parameterGroupNumber)
 			{
 				CANStackLogger::error("[TP]: Received a Clear To Send (CTS) message for 0x%05X while a session already existed for this source and destination, sending abort for both...", parameterGroupNumber);
-				abort_session(*session, ConnectionAbortReason::AnyOtherError);
-				send_abort(std::static_pointer_cast<InternalControlFunction>(destination), source, parameterGroupNumber, ConnectionAbortReason::AnyOtherError);
+				abort_session(*session, ConnectionAbortReason::ClearToSendReceivedWhileTransferInProgress);
+				send_abort(std::static_pointer_cast<InternalControlFunction>(destination), source, parameterGroupNumber, ConnectionAbortReason::ClearToSendReceivedWhileTransferInProgress);
 			}
-			else if (nextPacketNumber != (session->lastPacketNumber + 1))
+			else if (nextPacketNumber > session->get_total_number_of_packets())
 			{
 				CANStackLogger::error("[TP]: Received a Clear To Send (CTS) message for 0x%05X with a bad sequence number, aborting...", parameterGroupNumber);
 				abort_session(*session, ConnectionAbortReason::BadSequenceNumber);
@@ -299,22 +313,21 @@ namespace isobus
 			}
 			else
 			{
-				session->set_cts_response_packet_count(packetsToBeSent);
+				session->set_acknowledged_packet_number(nextPacketNumber - 1);
+				session->set_cts_number_of_packets(packetsToBeSent);
 
 				// If 0 was sent as the packet number, they want us to wait.
 				// Just sit here in this state until we get a non-zero packet count
 				if (0 != packetsToBeSent)
 				{
-					session->lastPacketNumber = 0;
-					session->state = StateMachineState::TxDataSession;
+					session->set_state(StateMachineState::TxDataSession);
 				}
 			}
 		}
 		else
 		{
-			// We got a CTS but no session exists. Aborting clears up the situation faster than waiting for them to timeout
-			CANStackLogger::warn("[TP]: Received Clear To Send (CTS) for 0x%05X while no session existed for this source and destination, sending abort.", parameterGroupNumber);
-			send_abort(std::static_pointer_cast<InternalControlFunction>(destination), source, parameterGroupNumber, ConnectionAbortReason::AnyOtherError);
+			// We got a CTS but no session exists, by the standard we must ignore it
+			CANStackLogger::warn("[TP]: Received Clear To Send (CTS) for 0x%05X while no session existed for this source and destination, ignoring...", parameterGroupNumber);
 		}
 	}
 
@@ -322,7 +335,7 @@ namespace isobus
 	                                                                      const std::shared_ptr<ControlFunction> destination,
 	                                                                      std::uint32_t parameterGroupNumber)
 	{
-		auto session = get_session(source, destination);
+		auto session = get_session(destination, source);
 		if (nullptr != session)
 		{
 			if (StateMachineState::WaitForEndOfMessageAcknowledge == session->state)
@@ -494,7 +507,7 @@ namespace isobus
 		auto source = message.get_source_control_function();
 		auto destination = message.is_broadcast() ? nullptr : message.get_destination_control_function();
 
-		auto packetNumber = message.get_uint8_at(SEQUENCE_NUMBER_DATA_INDEX);
+		auto sequenceNumber = message.get_uint8_at(SEQUENCE_NUMBER_DATA_INDEX);
 
 		auto session = get_session(source, destination);
 		if (nullptr != session)
@@ -504,24 +517,33 @@ namespace isobus
 				CANStackLogger::warn("[TP]: Received a Data Transfer message from %hu while not expecting one, sending abort", source->get_address());
 				abort_session(*session, ConnectionAbortReason::UnexpectedDataTransferPacketReceived);
 			}
-			else if (packetNumber == session->get_last_packet_number())
+			else if (sequenceNumber == session->get_last_sequence_number())
 			{
 				CANStackLogger::error("[TP]: Aborting rx session for 0x%05X due to duplicate sequence number", session->get_parameter_group_number());
 				abort_session(*session, ConnectionAbortReason::DuplicateSequenceNumber);
 			}
-			else if (packetNumber == (session->get_last_packet_number() + 1))
+			else if (sequenceNumber == (session->get_last_sequence_number() + 1))
 			{
 				// Convert data type to a vector to allow for manipulation
 				auto &data = static_cast<CANMessageDataVector &>(session->get_data());
 
 				// Correct sequence number, copy the data
-				for (std::uint8_t i = 0; (i < PROTOCOL_BYTES_PER_FRAME) && (static_cast<std::uint32_t>((PROTOCOL_BYTES_PER_FRAME * session->get_last_packet_number()) + i) < session->get_message_length()); i++)
+				for (std::uint8_t i = 0; i < PROTOCOL_BYTES_PER_FRAME; i++)
 				{
-					std::uint16_t currentDataIndex = (PROTOCOL_BYTES_PER_FRAME * session->get_last_packet_number()) + i;
-					data.set_byte(currentDataIndex, message.get_uint8_at(1 + i));
+					std::uint32_t currentDataIndex = (PROTOCOL_BYTES_PER_FRAME * session->get_last_packet_number()) + i;
+					if (currentDataIndex < session->get_message_length())
+					{
+						data.set_byte(currentDataIndex, message.get_uint8_at(1 + i));
+					}
+					else
+					{
+						// Reached the end of the message, no need to copy any more data
+						break;
+					}
 				}
-				session->set_last_packet_number(packetNumber);
-				if ((session->lastPacketNumber * PROTOCOL_BYTES_PER_FRAME) >= session->get_message_length())
+
+				session->set_last_sequency_number(sequenceNumber);
+				if (session->get_number_of_remaining_packets() == 0)
 				{
 					// Send End of Message Acknowledgement for sessions with specific destination only
 					if (!message.is_broadcast())
@@ -546,6 +568,10 @@ namespace isobus
 
 					canMessageReceivedCallback(completedMessage);
 					close_session(*session, true);
+				}
+				else if (session->get_cts_number_of_packets_remaining() == 0)
+				{
+					send_clear_to_send(*session);
 				}
 			}
 			else
@@ -658,16 +684,25 @@ namespace isobus
 	void TransportProtocolManager::send_data_transfer_packets(TransportProtocolSession &session)
 	{
 		std::array<std::uint8_t, CAN_DATA_LENGTH> buffer;
-		std::uint32_t framesSentThisUpdate = 0;
+		std::uint32_t framesToSend = session.get_cts_number_of_packets_remaining();
+		if (session.is_broadcast())
+		{
+			framesToSend = 1;
+		}
+		else if (framesToSend > configuration->get_max_number_of_network_manager_protocol_frames_per_update())
+		{
+			framesToSend = configuration->get_max_number_of_network_manager_protocol_frames_per_update();
+		}
 
 		// Try and send packets
-		for (std::uint8_t i = session.get_last_packet_number(); i < session.get_total_number_of_packets(); i++)
+		for (std::uint8_t i = 0; i < framesToSend; i++)
 		{
-			buffer[0] = (i + 1);
+			buffer[0] = session.get_last_sequence_number() + 1;
 
+			std::uint8_t dataOffset = session.get_last_packet_number() * PROTOCOL_BYTES_PER_FRAME;
 			for (std::uint8_t j = 0; j < PROTOCOL_BYTES_PER_FRAME; j++)
 			{
-				std::uint32_t index = (j + (PROTOCOL_BYTES_PER_FRAME * i));
+				std::uint32_t index = dataOffset + j;
 				if (index < session.get_message_length())
 				{
 					buffer[1 + j] = session.get_data().get_byte(index);
@@ -684,19 +719,7 @@ namespace isobus
 			                         session.get_destination(),
 			                         CANIdentifier::CANPriority::PriorityLowest7))
 			{
-				framesSentThisUpdate++;
-				session.lastPacketNumber++;
-				session.timestamp_ms = SystemTiming::get_timestamp_ms();
-
-				if (session.is_broadcast())
-				{
-					// Need to wait for the frame delay time before continuing BAM session
-					break;
-				}
-				else if (framesSentThisUpdate >= configuration->get_max_number_of_network_manager_protocol_frames_per_update())
-				{
-					break; // Throttle the session
-				}
+				session.set_last_sequency_number(session.get_last_sequence_number() + 1);
 			}
 			else
 			{
@@ -705,7 +728,7 @@ namespace isobus
 			}
 		}
 
-		if (session.get_message_length() <= (PROTOCOL_BYTES_PER_FRAME * session.get_last_packet_number()))
+		if (session.get_number_of_remaining_packets() == 0)
 		{
 			if (session.is_broadcast())
 			{
@@ -717,7 +740,7 @@ namespace isobus
 				session.set_state(StateMachineState::WaitForEndOfMessageAcknowledge);
 			}
 		}
-		else if (session.get_last_packet_number() == session.get_cts_response_packet_count())
+		else if (session.get_cts_number_of_packets_remaining() == 0)
 		{
 			session.set_state(StateMachineState::WaitForClearToSend);
 		}
@@ -740,11 +763,19 @@ namespace isobus
 			break;
 
 			case StateMachineState::WaitForClearToSend:
+			{
+				if (SystemTiming::time_expired_ms(session.timestamp_ms, T2_T3_TIMEOUT_MS) && (session.get_last_packet_number() > 0))
+				{
+					CANStackLogger::error("[TP]: Timeout rx session for 0x%05X (waiting for CTS)", session.get_parameter_group_number());
+					abort_session(session, ConnectionAbortReason::Timeout);
+				}
+			}
+			break;
 			case StateMachineState::WaitForEndOfMessageAcknowledge:
 			{
 				if (SystemTiming::time_expired_ms(session.timestamp_ms, T2_T3_TIMEOUT_MS))
 				{
-					CANStackLogger::error("[TP]: Timeout tx session for 0x%05X", session.get_parameter_group_number());
+					CANStackLogger::error("[TP]: Timeout tx session for 0x%05X (waiting for EOMA)", session.get_parameter_group_number());
 					abort_session(session, ConnectionAbortReason::Timeout);
 				}
 			}
@@ -884,7 +915,7 @@ namespace isobus
 				BROADCAST_ANNOUNCE_MESSAGE_MULTIPLEXOR,
 				static_cast<std::uint8_t>(session.get_message_length() & 0xFF),
 				static_cast<std::uint8_t>((session.get_message_length() >> 8) & 0xFF),
-				session.get_total_number_of_packets(),
+				static_cast<std::uint8_t>(session.get_total_number_of_packets()),
 				0xFF,
 				static_cast<std::uint8_t>(session.get_parameter_group_number() & 0xFF),
 				static_cast<std::uint8_t>((session.get_parameter_group_number() >> 8) & 0xFF),
@@ -899,20 +930,27 @@ namespace isobus
 		return retVal;
 	}
 
-	bool TransportProtocolManager::send_clear_to_send(const TransportProtocolSession &session) const
+	bool TransportProtocolManager::send_clear_to_send(TransportProtocolSession &session) const
 	{
 		bool retVal = false;
 		// Since we're the receiving side, we are the destination of the session
 		if (auto ourControlFunction = session.get_destination())
 		{
-			std::uint8_t packetsThisSegment = (session.get_cts_response_packet_count_max() < session.get_remaining_packets())
-			  ? session.get_cts_response_packet_count_max()
-			  : session.get_remaining_packets();
+			std::uint8_t packetsThisSegment = session.get_number_of_remaining_packets();
+			if (packetsThisSegment > session.get_rts_number_of_packet_limit())
+			{
+				packetsThisSegment = session.get_rts_number_of_packet_limit();
+			}
+			else if (packetsThisSegment > 16)
+			{
+				//! @todo apply CTS number of packets recommendation of 16 via a configuration option
+				packetsThisSegment = 16;
+			}
 
 			const std::array<std::uint8_t, CAN_DATA_LENGTH> buffer{
 				CLEAR_TO_SEND_MULTIPLEXOR,
 				packetsThisSegment,
-				static_cast<std::uint8_t>(session.processedPacketsThisSession + 1),
+				static_cast<std::uint8_t>(session.get_last_packet_number() + 1),
 				0xFF,
 				0xFF,
 				static_cast<std::uint8_t>(session.get_parameter_group_number() & 0xFF),
@@ -924,6 +962,11 @@ namespace isobus
 			                              std::static_pointer_cast<InternalControlFunction>(ourControlFunction),
 			                              session.get_source(),
 			                              CANIdentifier::CANPriority::PriorityLowest7);
+			if (retVal)
+			{
+				session.set_cts_number_of_packets(packetsThisSegment);
+				session.set_acknowledged_packet_number(session.get_last_packet_number());
+			}
 		}
 		return retVal;
 	}
@@ -937,8 +980,8 @@ namespace isobus
 				REQUEST_TO_SEND_MULTIPLEXOR,
 				static_cast<std::uint8_t>(session.get_message_length() & 0xFF),
 				static_cast<std::uint8_t>((session.get_message_length() >> 8) & 0xFF),
-				session.get_total_number_of_packets(),
-				0xFF,
+				static_cast<std::uint8_t>(session.get_total_number_of_packets()),
+				session.get_rts_number_of_packet_limit(),
 				static_cast<std::uint8_t>(session.get_parameter_group_number() & 0xFF),
 				static_cast<std::uint8_t>((session.get_parameter_group_number() >> 8) & 0xFF),
 				static_cast<std::uint8_t>((session.get_parameter_group_number() >> 16) & 0xFF)
@@ -965,7 +1008,7 @@ namespace isobus
 				END_OF_MESSAGE_ACKNOWLEDGE_MULTIPLEXOR,
 				static_cast<std::uint8_t>(messageLength & 0xFF),
 				static_cast<std::uint8_t>((messageLength >> 8) & 0xFF),
-				session.get_total_number_of_packets(),
+				static_cast<std::uint8_t>(session.get_total_number_of_packets()),
 				0xFF,
 				static_cast<std::uint8_t>(parameterGroupNumber & 0xFF),
 				static_cast<std::uint8_t>((parameterGroupNumber >> 8) & 0xFF),
