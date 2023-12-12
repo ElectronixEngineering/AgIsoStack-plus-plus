@@ -634,8 +634,10 @@ namespace isobus
 
 	void TransportProtocolManager::update()
 	{
-		for (auto &session : activeSessions)
+		// We use a fancy for loop here to allow us to remove sessions from the list while iterating
+		for (std::size_t i = activeSessions.size(); i > 0; i--)
 		{
+			auto &session = activeSessions.at(i - 1);
 			if (!session.get_source()->get_address_valid())
 			{
 				CANStackLogger::warn("[TP]: Closing active session as the source control function is no longer valid");
