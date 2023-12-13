@@ -675,12 +675,12 @@ namespace isobus
 			if (!session.get_source()->get_address_valid())
 			{
 				CANStackLogger::warn("[TP]: Closing active session as the source control function is no longer valid");
-				abort_session(session, ConnectionAbortReason::AnyOtherError);
+				close_session(session, false);
 			}
 			else if (!session.is_broadcast() && !session.get_destination()->get_address_valid())
 			{
 				CANStackLogger::warn("[TP]: Closing active session as the destination control function is no longer valid");
-				abort_session(session, ConnectionAbortReason::AnyOtherError);
+				close_session(session, false);
 			}
 			else if (StateMachineState::None != session.state)
 			{
