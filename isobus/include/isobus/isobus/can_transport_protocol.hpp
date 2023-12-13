@@ -154,6 +154,10 @@ namespace isobus
 			/// @param[in] value The number of packets to be sent in response to the curent CTS
 			void set_cts_number_of_packets(std::uint8_t value);
 
+			/// @brief Get the number of packets that can be sent in response to the current CTS
+			/// @return The number of packets that can be sent in response to the current CTS
+			std::uint8_t get_cts_number_of_packets() const;
+
 			/// @brief Get the maximum number of packets that can be sent per CTS as indicated by the RTS message
 			/// @return The maximum number of packets that can be sent per CTS as indicated by the RTS message
 			std::uint8_t get_rts_number_of_packet_limit() const;

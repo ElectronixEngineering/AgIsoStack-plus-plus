@@ -161,6 +161,11 @@ namespace isobus
 		timestamp_ms = SystemTiming::get_timestamp_ms();
 	}
 
+	std::uint8_t TransportProtocolManager::TransportProtocolSession::get_cts_number_of_packets() const
+	{
+		return clearToSendPacketCount;
+	}
+
 	std::uint8_t TransportProtocolManager::TransportProtocolSession::get_rts_number_of_packet_limit() const
 	{
 		return clearToSendPacketCountMax;
@@ -644,17 +649,20 @@ namespace isobus
 		{
 			// Broadcast message
 			session.set_state(StateMachineState::BroadcastAnnounce);
+			CANStackLogger::debug("[TP]: New broadcast tx session for 0x%05X. Source: %hu",
+			                      parameterGroupNumber,
+			                      source->get_address());
 		}
 		else
 		{
 			// Destination specific message
 			session.set_state(StateMachineState::RequestToSend);
+			CANStackLogger::debug("[TP]: New tx session for 0x%05X. Source: %hu, destination: %hu",
+			                      parameterGroupNumber,
+			                      source->get_address(),
+			                      destination->get_address());
 		}
 		activeSessions.push_back(std::move(session));
-		CANStackLogger::debug("[TP]: New tx session for 0x%05X. Source: %hu, Destination: %s",
-		                      parameterGroupNumber,
-		                      source->get_address(),
-		                      (nullptr == destination) ? "Global" : to_string(destination->get_address()).c_str());
 		return true;
 	}
 
@@ -764,10 +772,19 @@ namespace isobus
 
 			case StateMachineState::WaitForClearToSend:
 			{
-				if (SystemTiming::time_expired_ms(session.timestamp_ms, T2_T3_TIMEOUT_MS) && (session.get_last_packet_number() > 0))
+				if (SystemTiming::time_expired_ms(session.timestamp_ms, T2_T3_TIMEOUT_MS))
 				{
-					CANStackLogger::error("[TP]: Timeout rx session for 0x%05X (waiting for CTS)", session.get_parameter_group_number());
-					abort_session(session, ConnectionAbortReason::Timeout);
+					CANStackLogger::error("[TP]: Timeout rx session for 0x%05X (expected CTS)", session.get_parameter_group_number());
+					if (session.get_cts_number_of_packets() > 0)
+					{
+						// A connection is only considered established if we've received at least one CTS before
+						// And we can only abort a connection if it's considered established
+						abort_session(session, ConnectionAbortReason::Timeout);
+					}
+					else
+					{
+						close_session(session, false);
+					}
 				}
 			}
 			break;
@@ -775,7 +792,7 @@ namespace isobus
 			{
 				if (SystemTiming::time_expired_ms(session.timestamp_ms, T2_T3_TIMEOUT_MS))
 				{
-					CANStackLogger::error("[TP]: Timeout tx session for 0x%05X (waiting for EOMA)", session.get_parameter_group_number());
+					CANStackLogger::error("[TP]: Timeout tx session for 0x%05X (expected EOMA)", session.get_parameter_group_number());
 					abort_session(session, ConnectionAbortReason::Timeout);
 				}
 			}
@@ -823,12 +840,21 @@ namespace isobus
 						close_session(session, false);
 					}
 				}
+				else if (session.get_cts_number_of_packets_remaining() == session.get_cts_number_of_packets())
+				{
+					// Waiting to receive the first data frame after CTS
+					if (SystemTiming::time_expired_ms(session.timestamp_ms, T2_T3_TIMEOUT_MS))
+					{
+						CANStackLogger::error("[TP]: Timeout for destination-specific rx session (expected first data frame)");
+						abort_session(session, ConnectionAbortReason::Timeout);
+					}
+				}
 				else
 				{
-					// CM TP Timeout check
-					if (SystemTiming::time_expired_ms(session.timestamp_ms, MESSAGE_TR_TIMEOUT_MS))
+					// Waiting on sequencial data frames
+					if (SystemTiming::time_expired_ms(session.timestamp_ms, T1_TIMEOUT_MS))
 					{
-						CANStackLogger::error("[TP]: Destination specific rx session timeout");
+						CANStackLogger::error("[TP]: Timeout for destination-specific rx session (expected sequencial data frame)");
 						abort_session(session, ConnectionAbortReason::Timeout);
 					}
 				}
