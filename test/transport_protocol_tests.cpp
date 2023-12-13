@@ -351,7 +351,7 @@ TEST(TRANSPORT_PROTOCOL_TESTS, BroadcastConcurrentMessaging)
 	auto originator4 = test_helpers::create_mock_control_function(0x04);
 	auto originator5 = test_helpers::create_mock_control_function(0x05);
 
-	std::uint8_t messageCount = 0;
+	std::array<bool, 5> messagesReceived = { false };
 	auto receiveMessageCallback = [&](const CANMessage &message) {
 		CANIdentifier identifier = message.get_identifier();
 		ASSERT_EQ(identifier.get_priority(), CANIdentifier::CANPriority::PriorityDefault6);
@@ -361,29 +361,40 @@ TEST(TRANSPORT_PROTOCOL_TESTS, BroadcastConcurrentMessaging)
 		const std::uint8_t *dataToCheck;
 		std::size_t dataLengthToCheck;
 
-		if ((message.get_source_control_function() == originator1) || (message.get_source_control_function() == originator2))
+		if (message.get_source_control_function() == originator1)
 		{
 			pgnToCheck = pgn1ToReceive;
 			dataToCheck = dataToReceive1.data();
 			dataLengthToCheck = dataToReceive1.size();
+			messagesReceived[0] = true;
+		}
+		else if (message.get_source_control_function() == originator2)
+		{
+			pgnToCheck = pgn1ToReceive;
+			dataToCheck = dataToReceive1.data();
+			dataLengthToCheck = dataToReceive1.size();
+			messagesReceived[1] = true;
 		}
 		else if (message.get_source_control_function() == originator3)
 		{
 			pgnToCheck = pgn1ToReceive;
 			dataToCheck = dataToReceive2.data();
 			dataLengthToCheck = dataToReceive2.size();
+			messagesReceived[2] = true;
 		}
 		else if (message.get_source_control_function() == originator4)
 		{
 			pgnToCheck = pgn2ToReceive;
 			dataToCheck = dataToReceive1.data();
 			dataLengthToCheck = dataToReceive1.size();
+			messagesReceived[3] = true;
 		}
 		else if (message.get_source_control_function() == originator5)
 		{
 			pgnToCheck = pgn2ToReceive;
 			dataToCheck = dataToReceive2.data();
 			dataLengthToCheck = dataToReceive2.size();
+			messagesReceived[4] = true;
 		}
 		else
 		{
@@ -397,7 +408,6 @@ TEST(TRANSPORT_PROTOCOL_TESTS, BroadcastConcurrentMessaging)
 		{
 			ASSERT_EQ(message.get_data()[i], dataToCheck[i]);
 		}
-		messageCount++;
 	};
 
 	// Create the receiving transport protocol manager
@@ -444,7 +454,8 @@ TEST(TRANSPORT_PROTOCOL_TESTS, BroadcastConcurrentMessaging)
 
 	// Wait for the transmissions to finish (or timeout)
 	std::uint32_t time = SystemTiming::get_timestamp_ms();
-	while ((messageCount < 5) && (SystemTiming::get_time_elapsed_ms(time) < 5 * 200))
+	while (std::any_of(messagesReceived.begin(), messagesReceived.end(), [](bool received) { return !received; }) &&
+	       (SystemTiming::get_time_elapsed_ms(time) < 5 * 200))
 	{
 		txManager.update();
 		rxManager.update();
@@ -460,7 +471,7 @@ TEST(TRANSPORT_PROTOCOL_TESTS, BroadcastConcurrentMessaging)
 	ASSERT_FALSE(txManager.has_session(originator3, nullptr));
 	ASSERT_FALSE(txManager.has_session(originator4, nullptr));
 	ASSERT_FALSE(txManager.has_session(originator5, nullptr));
-	ASSERT_EQ(messageCount, 5);
+	ASSERT_TRUE(std::all_of(messagesReceived.begin(), messagesReceived.end(), [](bool received) { return received; }));
 }
 
 // Test case for sending a destination specific message
@@ -1326,4 +1337,143 @@ TEST(TRANSPORT_PROTOCOL_TESTS, DestinationSpecificMessageConcurrent)
 	ASSERT_FALSE(rxManager.has_session(divergingOriginator, receiver3));
 	ASSERT_FALSE(rxManager.has_session(divergingOriginator, receiver4));
 	ASSERT_FALSE(rxManager.has_session(divergingOriginator, receiver5));
+}
+
+// Test case for concurrent destination specific and broadcast messages from same source
+TEST(TRANSPORT_PROTOCOL_TESTS, DestinationSpecificAndBroadcastMessageConcurrent)
+{
+	constexpr std::uint32_t pgnToReceiveBroadcast = 0xFEEC;
+	constexpr std::uint32_t pgnToReceiveSpecific = 0xFEEB;
+	constexpr std::array<std::uint8_t, 17> dataToReceiveBroadcast = { 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 0x10, 0x11 };
+	constexpr std::array<std::uint8_t, 12> dataToReceiveSpecific = { 0xAC, 0xAB, 0xAA, 0xA9, 0xA8, 0xA7, 0xA6, 0xA5, 0xA4, 0xA3, 0xA2, 0xA1 };
+
+	auto originator = test_helpers::create_mock_control_function(0x01);
+	auto receiver = test_helpers::create_mock_control_function(0x02);
+
+	std::deque<CANMessage> originatingQueue;
+	std::deque<CANMessage> receivingQueue;
+
+	bool broadcastCompleted = false;
+	bool specificCompleted = false;
+
+	auto receiveMessageCallback = [&](const CANMessage &message) {
+		CANIdentifier identifier = message.get_identifier();
+		EXPECT_EQ(identifier.get_priority(), CANIdentifier::CANPriority::PriorityDefault6);
+
+		if (message.is_broadcast())
+		{
+			EXPECT_EQ(identifier.get_parameter_group_number(), pgnToReceiveBroadcast);
+			EXPECT_EQ(message.get_data_length(), dataToReceiveBroadcast.size());
+			for (std::size_t i = 0; i < dataToReceiveBroadcast.size(); i++)
+			{
+				EXPECT_EQ(message.get_data()[i], dataToReceiveBroadcast[i]);
+			}
+			broadcastCompleted = true;
+		}
+		else
+		{
+			EXPECT_EQ(identifier.get_parameter_group_number(), pgnToReceiveSpecific);
+			EXPECT_EQ(message.get_data_length(), dataToReceiveSpecific.size());
+			for (std::size_t i = 0; i < dataToReceiveSpecific.size(); i++)
+			{
+				EXPECT_EQ(message.get_data()[i], dataToReceiveSpecific[i]);
+			}
+			specificCompleted = true;
+		}
+	};
+
+	auto sendFrameCallback = [&](std::uint32_t parameterGroupNumber,
+	                             CANDataSpan data,
+	                             std::shared_ptr<InternalControlFunction> sourceControlFunction,
+	                             std::shared_ptr<ControlFunction> destinationControlFunction,
+	                             CANIdentifier::CANPriority priority) {
+		CANMessage message(0); //! TODO: hack for now, will be fixed when we remove CANNetwork Singleton
+		message.set_source_control_function(sourceControlFunction);
+		message.set_data(data.begin(), data.size());
+		if (destinationControlFunction == nullptr)
+		{
+			// Broadcast message
+			message.set_identifier(CANIdentifier(
+			  test_helpers::create_ext_can_id_broadcast(static_cast<std::uint8_t>(priority),
+			                                            parameterGroupNumber,
+			                                            sourceControlFunction)));
+			if (sourceControlFunction == originator)
+			{
+				originatingQueue.push_back(message);
+			}
+			else
+			{
+				// Unexpected source, fail the test
+				EXPECT_TRUE(false);
+			}
+		}
+		else
+		{
+			// Destination specific message
+			message.set_identifier(CANIdentifier(
+			  test_helpers::create_ext_can_id(static_cast<std::uint8_t>(priority),
+			                                  parameterGroupNumber,
+			                                  sourceControlFunction,
+			                                  destinationControlFunction)));
+			message.set_destination_control_function(destinationControlFunction);
+			if (sourceControlFunction == originator)
+			{
+				originatingQueue.push_back(message);
+			}
+			else if (sourceControlFunction == receiver)
+			{
+				receivingQueue.push_back(message);
+			}
+			else
+			{
+				// Unexpected source or destination, fail the test
+				EXPECT_TRUE(false);
+			}
+		}
+		return true;
+	};
+
+	// Create the transport protocol managers
+	CANNetworkConfiguration defaultConfiguration;
+	TransportProtocolManager txManager(sendFrameCallback, nullptr, &defaultConfiguration);
+	TransportProtocolManager rxManager(sendFrameCallback, receiveMessageCallback, &defaultConfiguration);
+
+	// Send the broadcast message
+	std::unique_ptr<CANMessageData> data = std::make_unique<CANMessageDataView>(dataToReceiveBroadcast.data(), dataToReceiveBroadcast.size());
+	ASSERT_TRUE(txManager.protocol_transmit_message(pgnToReceiveBroadcast, data, originator, nullptr, nullptr, nullptr));
+	ASSERT_TRUE(txManager.has_session(originator, nullptr));
+
+	// Send the destination specific message
+	data = std::make_unique<CANMessageDataView>(dataToReceiveSpecific.data(), dataToReceiveSpecific.size());
+	ASSERT_TRUE(txManager.protocol_transmit_message(pgnToReceiveSpecific, data, originator, receiver, nullptr, nullptr));
+	ASSERT_TRUE(txManager.has_session(originator, receiver));
+
+	// Wait for the transmissions to finish (or timeout)
+	std::uint32_t time = SystemTiming::get_timestamp_ms();
+	while ((!broadcastCompleted || !specificCompleted) && // Wait for both connections to be completed, or
+	       (SystemTiming::get_time_elapsed_ms(time) < 1250 + 200 + 200 + 1250)) // maximum time exceeded for 2 packets with 1 CTS according to ISO 11783-3
+	{
+		if (!originatingQueue.empty())
+		{
+			rxManager.process_message(originatingQueue.front());
+			originatingQueue.pop_front();
+		}
+		if (!receivingQueue.empty())
+		{
+			txManager.process_message(receivingQueue.front());
+			receivingQueue.pop_front();
+		}
+		txManager.update();
+		rxManager.update();
+	}
+
+	// Check that both transmissions are completed
+	ASSERT_TRUE(broadcastCompleted);
+	ASSERT_TRUE(specificCompleted);
+
+	// After the transmission is finished, the sessions should be removed as indication that connection is closed
+	ASSERT_FALSE(txManager.has_session(originator, nullptr));
+	ASSERT_FALSE(txManager.has_session(originator, receiver));
+	ASSERT_FALSE(rxManager.has_session(originator, nullptr));
+	ASSERT_FALSE(rxManager.has_session(originator, receiver));
 }
