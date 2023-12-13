@@ -119,11 +119,10 @@ namespace isobus
 	                                                                                                                               std::unique_ptr<CANMessageData> data,
 	                                                                                                                               std::shared_ptr<ControlFunction> source,
 	                                                                                                                               std::shared_ptr<ControlFunction> destination,
+	                                                                                                                               std::uint8_t clearToSendPacketMax,
 	                                                                                                                               TransmitCompleteCallback sessionCompleteCallback,
 	                                                                                                                               void *parentPointer)
 	{
-		constexpr std::uint8_t MAX_PACKETS_PER_SEGMENT = 16; //! @todo: make this configurable, the standard recommends 16
-
 		auto totalMessageSize = data->size();
 		auto totalPacketCount = static_cast<std::uint8_t>(totalMessageSize / PROTOCOL_BYTES_PER_FRAME);
 		if (0 != (totalMessageSize % PROTOCOL_BYTES_PER_FRAME))
@@ -135,7 +134,7 @@ namespace isobus
 		                                parameterGroupNumber,
 		                                totalMessageSize,
 		                                totalPacketCount,
-		                                MAX_PACKETS_PER_SEGMENT,
+		                                clearToSendPacketMax,
 		                                source,
 		                                destination,
 		                                sessionCompleteCallback,
@@ -279,6 +278,12 @@ namespace isobus
 
 			auto data = std::make_unique<CANMessageDataVector>(totalMessageSize);
 
+			if (clearToSendPacketMax > configuration->get_number_of_packets_per_cts_message())
+			{
+				CANStackLogger::debug("[TP]: Received Request To Send (RTS) with a CTS packet count of %hu, which is greater than the configured maximum of %hu, using the configured maximum instead.", clearToSendPacketMax, configuration->get_number_of_packets_per_cts_message());
+				clearToSendPacketMax = configuration->get_number_of_packets_per_cts_message();
+			}
+
 			TransportProtocolSession newSession = TransportProtocolSession::create_receive_session(parameterGroupNumber,
 			                                                                                       totalMessageSize,
 			                                                                                       totalNumberOfPackets,
@@ -357,8 +362,7 @@ namespace isobus
 		}
 		else
 		{
-			CANStackLogger::warn("[TP]: Received End Of Message Acknowledgement for 0x%05X while no session existed for this source and destination, sending abort.", parameterGroupNumber);
-			send_abort(std::static_pointer_cast<InternalControlFunction>(destination), source, parameterGroupNumber, ConnectionAbortReason::AnyOtherError);
+			CANStackLogger::warn("[TP]: Received End Of Message Acknowledgement for 0x%05X while no session existed for this source and destination, ignoring.", parameterGroupNumber);
 		}
 	}
 
@@ -378,7 +382,6 @@ namespace isobus
 		}
 		session = get_session(destination, source);
 		if ((nullptr != session) && (session->get_parameter_group_number() == parameterGroupNumber))
-
 		{
 			foundSession = true;
 			CANStackLogger::error("[TP]: Received an abort (reason=%hu) for a tx session for parameterGroupNumber 0x%05X", static_cast<std::uint8_t>(reason), parameterGroupNumber);
@@ -642,6 +645,7 @@ namespace isobus
 		                                                                                     std::move(data),
 		                                                                                     source,
 		                                                                                     destination,
+		                                                                                     configuration->get_number_of_packets_per_cts_message(),
 		                                                                                     sessionCompleteCallback,
 		                                                                                     parentPointer);
 

@@ -14,20 +14,6 @@
 
 using namespace isobus;
 
-void check_abort_message(const CANMessage &message, const std::uint8_t abortReason, const uint32_t parameterGroupNumber)
-{
-	ASSERT_EQ(message.get_identifier().get_parameter_group_number(), 0xEC00); // Transport Protocol Connection Management
-	ASSERT_EQ(message.get_data_length(), 8);
-	ASSERT_EQ(message.get_data()[0], 255); // Abort control byte
-	ASSERT_EQ(message.get_data()[1], abortReason);
-	ASSERT_EQ(message.get_data()[2], 0xFF); // Reserved
-	ASSERT_EQ(message.get_data()[3], 0xFF); // Reserved
-	ASSERT_EQ(message.get_data()[4], 0xFF); // Reserved
-	ASSERT_EQ(message.get_data()[5], parameterGroupNumber & 0xFF);
-	ASSERT_EQ(message.get_data()[6], (parameterGroupNumber >> 8) & 0xFF);
-	ASSERT_EQ(message.get_data()[7], (parameterGroupNumber >> 16) & 0xFF);
-}
-
 // Test case for sending a broadcast message
 TEST(TRANSPORT_PROTOCOL_TESTS, BroadcastMessageSending)
 {
@@ -517,7 +503,7 @@ TEST(TRANSPORT_PROTOCOL_TESTS, DestinationSpecificMessageSending)
 				EXPECT_EQ(data[1], 23);
 				EXPECT_EQ(data[2], 0);
 				EXPECT_EQ(data[3], 4); // Number of packets
-				EXPECT_EQ(data[4], 16); // Limit number of packets in CTS (should be 16 by default to follow recommendation in ISO 11783-3)
+				EXPECT_EQ(data[4], 1); // Limit number of packets in CTS as per configuration
 				EXPECT_EQ(data[5], 0xEB); // PGN LSB
 				EXPECT_EQ(data[6], 0xFE); // PGN middle byte
 				EXPECT_EQ(data[7], 0x00); // PGN MSB
@@ -530,7 +516,7 @@ TEST(TRANSPORT_PROTOCOL_TESTS, DestinationSpecificMessageSending)
 				  destinationControlFunction,
 				  {
 				    17, // CTS Mux
-				    2, // Number of packets
+				    2, // Number of packets (ignores the limit in the RTS message)
 				    1, // Next packet to send
 				    0xFF, // Reserved
 				    0xFF, // Reserved
@@ -635,8 +621,11 @@ TEST(TRANSPORT_PROTOCOL_TESTS, DestinationSpecificMessageSending)
 	};
 
 	// Create the transport protocol manager
-	CANNetworkConfiguration defaultConfiguration;
-	TransportProtocolManager manager(sendFrameCallback, nullptr, &defaultConfiguration);
+	// We ask the originator to send only one packet per CTS message, but then we simulate it ignoring the request in the CTS message
+	// to test the manager compliance with the receiving control function's CTS limit.
+	CANNetworkConfiguration configuration;
+	configuration.set_number_of_packets_per_cts_message(1);
+	TransportProtocolManager manager(sendFrameCallback, nullptr, &configuration);
 
 	// Send the message
 	std::unique_ptr<CANMessageData> data = std::make_unique<CANMessageDataView>(dataToSent.data(), dataToSent.size());
@@ -867,6 +856,20 @@ TEST(TRANSPORT_PROTOCOL_TESTS, DestinationSpecificMessageReceiving)
 
 	// After the transmission is finished, the session should be removed as indication that connection is closed
 	ASSERT_FALSE(manager.has_session(originator, receiver));
+}
+
+void check_abort_message(const CANMessage &message, const std::uint8_t abortReason, const uint32_t parameterGroupNumber)
+{
+	ASSERT_EQ(message.get_identifier().get_parameter_group_number(), 0xEC00); // Transport Protocol Connection Management
+	ASSERT_EQ(message.get_data_length(), 8);
+	ASSERT_EQ(message.get_data()[0], 255); // Abort control byte
+	ASSERT_EQ(message.get_data()[1], abortReason);
+	ASSERT_EQ(message.get_data()[2], 0xFF); // Reserved
+	ASSERT_EQ(message.get_data()[3], 0xFF); // Reserved
+	ASSERT_EQ(message.get_data()[4], 0xFF); // Reserved
+	ASSERT_EQ(message.get_data()[5], parameterGroupNumber & 0xFF);
+	ASSERT_EQ(message.get_data()[6], (parameterGroupNumber >> 8) & 0xFF);
+	ASSERT_EQ(message.get_data()[7], (parameterGroupNumber >> 16) & 0xFF);
 }
 
 // Test case for timeout when initiating destination specific message
@@ -1791,8 +1794,8 @@ TEST(TRANSPORT_PROTOCOL_TESTS, DestinationSpecificRandomCTS)
 		  receiver,
 		  {
 		    17, // CTS Mux
-		    2, // Number of packets
-		    1, // Next packet to send
+		    4, // Number of packets
+		    2, // Next packet to send
 		    0xFF, // Reserved
 		    0xFF, // Reserved
 		    0xEB, // PGN LSB
@@ -1807,8 +1810,8 @@ TEST(TRANSPORT_PROTOCOL_TESTS, DestinationSpecificRandomCTS)
 	ASSERT_FALSE(rxManager.has_session(originator, receiver));
 }
 
-// Test case for rejecting a RTS for already established connection, or when exceeding the maximum number of sessions
-TEST(TRANSPORT_PROTOCOL_TESTS, DestinationSpecificRejectConnection)
+// Test case for rejecting a RTS when exceeding the maximum number of sessions
+TEST(TRANSPORT_PROTOCOL_TESTS, DestinationSpecificRejectForOutOfResources)
 {
 	auto originator1 = test_helpers::create_mock_control_function(0x01);
 	auto originator2 = test_helpers::create_mock_control_function(0x02);
@@ -1912,4 +1915,228 @@ TEST(TRANSPORT_PROTOCOL_TESTS, DestinationSpecificRejectConnection)
 	ASSERT_TRUE(originator2AbortReceived);
 	ASSERT_TRUE(manager.has_session(originator1, receiver)); // The first connection should still be active
 	ASSERT_FALSE(manager.has_session(originator2, receiver)); // The second connection should be rejected
+}
+
+// A test case for overwriting a session when a new RTS is received
+TEST(TRANSPORT_PROTOCOL_TESTS, DestinationSpecificOverwriteSession)
+{
+	auto originator = test_helpers::create_mock_control_function(0x01);
+	auto receiver = test_helpers::create_mock_control_function(0x0B);
+
+	std::size_t messageCount = 0;
+	auto receiveMessageCallback = [&](const CANMessage &message) {
+		ASSERT_EQ(message.get_data_length(), 15);
+		ASSERT_EQ(message.get_source_control_function(), originator);
+		ASSERT_EQ(message.get_destination_control_function(), receiver);
+		ASSERT_EQ(message.get_identifier().get_parameter_group_number(), 0xFEEC);
+		ASSERT_EQ(message.get_data()[0], 0x01);
+		ASSERT_EQ(message.get_data()[1], 0x02);
+		ASSERT_EQ(message.get_data()[2], 0x03);
+		ASSERT_EQ(message.get_data()[3], 0x04);
+		ASSERT_EQ(message.get_data()[4], 0x05);
+		ASSERT_EQ(message.get_data()[5], 0x06);
+		ASSERT_EQ(message.get_data()[6], 0x07);
+		ASSERT_EQ(message.get_data()[7], 0x08);
+		ASSERT_EQ(message.get_data()[8], 0x09);
+		ASSERT_EQ(message.get_data()[9], 0x0A);
+		ASSERT_EQ(message.get_data()[10], 0x0B);
+		ASSERT_EQ(message.get_data()[11], 0x0C);
+		ASSERT_EQ(message.get_data()[12], 0x0D);
+		ASSERT_EQ(message.get_data()[13], 0x0E);
+		ASSERT_EQ(message.get_data()[14], 0x0F);
+		messageCount++;
+	};
+
+	std::size_t frameCount = 0;
+	auto sendFrameCallback = [&](std::uint32_t parameterGroupNumber,
+	                             CANDataSpan data,
+	                             std::shared_ptr<InternalControlFunction> sourceControlFunction,
+	                             std::shared_ptr<ControlFunction> destinationControlFunction,
+	                             CANIdentifier::CANPriority priority) {
+		EXPECT_EQ(data.size(), 8);
+		EXPECT_EQ(sourceControlFunction, receiver);
+		EXPECT_EQ(destinationControlFunction, originator);
+		EXPECT_EQ(priority, CANIdentifier::CANPriority::PriorityLowest7);
+
+		switch (frameCount)
+		{
+			case 0:
+				// First we expect a CTS message for the first RTS
+				EXPECT_EQ(parameterGroupNumber, 0xEC00);
+				EXPECT_EQ(data[0], 17); // CTS control byte
+				EXPECT_EQ(data[1], 2); // Number of packets
+				EXPECT_EQ(data[2], 1); // Next packet to send
+				EXPECT_EQ(data[3], 0xFF);
+				EXPECT_EQ(data[4], 0xFF); // Reserved
+				EXPECT_EQ(data[5], 0xEC); // PGN LSB
+				EXPECT_EQ(data[6], 0xFE); // PGN middle byte
+				EXPECT_EQ(data[7], 0x00); // PGN MSB
+				break;
+
+			case 1:
+				// Then we expect a CTS message for the second RTS
+				EXPECT_EQ(parameterGroupNumber, 0xEC00);
+				EXPECT_EQ(data[0], 17); // CTS control byte
+				EXPECT_EQ(data[1], 3); // Number of packets
+				EXPECT_EQ(data[2], 1); // Next packet to send
+				EXPECT_EQ(data[3], 0xFF);
+				EXPECT_EQ(data[4], 0xFF); // Reserved
+				EXPECT_EQ(data[5], 0xEC); // PGN LSB
+				EXPECT_EQ(data[6], 0xFE); // PGN middle byte
+				EXPECT_EQ(data[7], 0x00); // PGN MSB
+				break;
+
+			case 2:
+				// Then we expect a End of Message Acknowledgement for the overwritten session
+				EXPECT_EQ(parameterGroupNumber, 0xEC00);
+				EXPECT_EQ(data[0], 19); // End of Message Acknowledgement control byte
+				EXPECT_EQ(data[1], 15); // Number of bytes
+				EXPECT_EQ(data[2], 0); // Number of bytes MSB
+				EXPECT_EQ(data[3], 3); // Total number of packets
+				EXPECT_EQ(data[4], 0xFF); // Reserved
+				EXPECT_EQ(data[5], 0xEC); // PGN LSB
+				EXPECT_EQ(data[6], 0xFE); // PGN middle byte
+				EXPECT_EQ(data[7], 0x00); // PGN MSB
+				break;
+
+			default:
+				EXPECT_TRUE(false);
+		}
+
+		frameCount++;
+		return true;
+	};
+
+	// Create the transport protocol manager
+	CANNetworkConfiguration defaultConfiguration;
+	TransportProtocolManager manager(sendFrameCallback, receiveMessageCallback, &defaultConfiguration);
+
+	// Send first RTS
+	manager.process_message(test_helpers::create_message(
+	  7,
+	  0xEC00, // Transport Protocol Connection Management
+	  receiver,
+	  originator,
+	  {
+	    16, // RTS control byte
+	    9, // Message size
+	    0, // Message size MSB
+	    2, // Number of packets
+	    0xFF,
+	    0xEC, // PGN LSB
+	    0xFE, // PGN middle byte
+	    0x00, // PGN MSB
+	  }));
+
+	// Wait for the first CTS to be sent
+	std::uint32_t time = SystemTiming::get_timestamp_ms();
+	while ((frameCount < 1) && (SystemTiming::get_time_elapsed_ms(time) < 1250))
+	{
+		manager.update();
+	}
+
+	ASSERT_EQ(frameCount, 1);
+
+	// Send the first data frame
+	manager.process_message(test_helpers::create_message(
+	  7,
+	  0xEB00, // Transport Protocol Data Transfer
+	  receiver,
+	  originator,
+	  {
+	    1, // Sequence number
+	    0x01,
+	    0x02,
+	    0x03,
+	    0x04,
+	    0x05,
+	    0x06,
+	    0x07,
+	  }));
+
+	// Now we overwrite with a new RTS
+	manager.process_message(test_helpers::create_message(
+	  7,
+	  0xEC00, // Transport Protocol Connection Management
+	  receiver,
+	  originator,
+	  {
+	    16, // RTS control byte
+	    15, // Message size
+	    0, // Message size MSB
+	    3, // Number of packets
+	    0xFF,
+	    0xEC, // PGN LSB
+	    0xFE, // PGN middle byte
+	    0x00, // PGN MSB
+	  }));
+
+	// Wait for the second CTS to be sent
+	time = SystemTiming::get_timestamp_ms();
+	while ((frameCount < 2) && (SystemTiming::get_time_elapsed_ms(time) < 1250))
+	{
+		manager.update();
+	}
+
+	ASSERT_EQ(frameCount, 2);
+
+	// Send the 3 data frames
+	manager.process_message(test_helpers::create_message(
+	  7,
+	  0xEB00, // Transport Protocol Data Transfer
+	  receiver,
+	  originator,
+	  {
+	    1, // Sequence number
+	    0x01,
+	    0x02,
+	    0x03,
+	    0x04,
+	    0x05,
+	    0x06,
+	    0x07,
+	  }));
+	manager.process_message(test_helpers::create_message(
+	  7,
+	  0xEB00, // Transport Protocol Data Transfer
+	  receiver,
+	  originator,
+	  {
+	    2, // Sequence number
+	    0x08,
+	    0x09,
+	    0x0A,
+	    0x0B,
+	    0x0C,
+	    0x0D,
+	    0x0E,
+	  }));
+	manager.process_message(test_helpers::create_message(
+	  7,
+	  0xEB00, // Transport Protocol Data Transfer
+	  receiver,
+	  originator,
+	  {
+	    3, // Sequence number
+	    0x0F,
+	    0xFF,
+	    0xFF,
+	    0xFF,
+	    0xFF,
+	    0xFF,
+	    0xFF,
+	  }));
+
+	// Wait for the End of Message Acknowledgement to be sent
+	time = SystemTiming::get_timestamp_ms();
+	while ((frameCount < 3) && (SystemTiming::get_time_elapsed_ms(time) < 1250))
+	{
+		manager.update();
+	}
+
+	ASSERT_EQ(frameCount, 3);
+	ASSERT_EQ(messageCount, 1);
+
+	// After the transmission is finished, the sessions should be removed as indication that connection is closed
+	ASSERT_FALSE(manager.has_session(originator, receiver));
 }

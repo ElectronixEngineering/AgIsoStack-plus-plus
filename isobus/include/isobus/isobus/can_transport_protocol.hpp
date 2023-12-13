@@ -139,6 +139,7 @@ namespace isobus
 			                                                        std::unique_ptr<CANMessageData> data,
 			                                                        std::shared_ptr<ControlFunction> source,
 			                                                        std::shared_ptr<ControlFunction> destination,
+			                                                        std::uint8_t clearToSendPacketMax,
 			                                                        TransmitCompleteCallback sessionCompleteCallback,
 			                                                        void *parentPointer);
 
